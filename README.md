@@ -13,6 +13,10 @@
   <a href="LICENSE">License</a>
 </p>
 
+<p align="center">
+  <img src="docs/demo.webp" alt="Searching for a Halo of Karini with Critical Hit Chance, Critical Hit Damage and Attack Speed on a Wizard, then opening a recipe's full tooltip" width="720">
+</p>
+
 ---
 
 A recipe finder for **Kanai's Cube** in offline Diablo III on consoles. Pick an item and the stats you care about and it attempts to create a recipe that can reliably produce it using a brand-new seasonal hero. You can, of course, use generated items on any hero.
@@ -45,7 +49,7 @@ Copy the block in `builds_template.toml`, fill in your collection of items (item
 | `web/` | the static site (`index.html`, `app.js`, `builds.js`, `recipe.js`, `stats.js`, `worker.js`, `icons/`), the game tables (`data.json`), the prepared recipes (`premade_sc.json`, `premade_hc.json`) and the compiled WebAssembly (`pkg/`) |
 | `core/` | the Rust crate: model (`sim.rs`), search (`plan.rs`), table loading (`data.rs`), wasm interface (`lib.rs`) and tests |
 | `testdata/` | expected results used by the tests |
-| `docs/` | the README banner |
+| `docs/` | the README banner and demo |
 | `builds.toml` | the list of precomputed builds (items and stat priorities per slot) |
 | `builds_template.toml` | copy-paste form for requesting a build |
 
