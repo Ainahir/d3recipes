@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=e4b80d36a7";
-import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=e4b80d36a7";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=5d2c9f81b4";
+import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=5d2c9f81b4";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -42,12 +42,12 @@ function hitOf(row, path, lin) {
   return { hope: row.n, slot: row.rs, route, checkpoints, root_name: lin[0][0], name: lin[lin.length - 1][0] };
 }
 
-// Cost in Reforge-equivalents with the prices the search minimises (Hope of Cain 2, Reforge 1, Convert 1, Improve Legendary 25), and the plain
-// number of actions (crafts + operations). Cost is what you pay in materials; steps is how long it takes.
-const PRICE = { R: 1, C: 1, P: 25 };
-const costOf = (n, path) => 2 * n + [...path].reduce((a, c) => a + (PRICE[c] || 0), 0);
+// Cost in Hope of Cain units with the relative prices the search minimises (Convert Set Item 0.75, Hope of Cain 1, Reforge 5, Improve Legendary 25),
+// and the plain number of actions (crafts + operations). Cost is what you pay in materials; steps is how long it takes.
+const PRICE = { R: 5, C: 0.75, P: 25 };
+const costOf = (n, path) => Number((n + [...path].reduce((a, c) => a + (PRICE[c] || 0), 0)).toFixed(2));
 const stepsOf = (n, path) => n + path.length;
-const COST_TIP = "Cost in Reforges: Hope of Cain 2, Reforge 1, Convert Set Item 1, Improve Legendary 25. Steps: crafts plus operations.";
+const COST_TIP = "Relative cost: Hope of Cain 1, Reforge 5, Convert Set Item 0.75, Improve Legendary 25. Steps: crafts plus operations.";
 // The numbers are for the site's owner (deciding what to ship), not for players, whose materials row says what a recipe costs:
 // they only show when the address carries ?costs.
 const SHOW_COSTS = new URLSearchParams(location.search).has("costs");
