@@ -42,7 +42,7 @@ Copy the block in `builds_template.toml`, fill in your collection of items (item
 
 | path | what |
 | --- | --- |
-| `web/` | the static site (`index.html`, `app.js`, `worker.js`, `stats.js`), the game tables (`data.json`) and the compiled WebAssembly (`pkg/`) |
+| `web/` | the static site (`index.html`, `app.js`, `builds.js`, `recipe.js`, `stats.js`, `worker.js`, `icons/`), the game tables (`data.json`), the prepared recipes (`premade_sc.json`, `premade_hc.json`) and the compiled WebAssembly (`pkg/`) |
 | `core/` | the Rust crate: model (`sim.rs`), search (`plan.rs`), table loading (`data.rs`), wasm interface (`lib.rs`) and tests |
 | `testdata/` | expected results used by the tests |
 | `docs/` | the README banner |
