@@ -1,0 +1,2015 @@
+# Precomputed-builds source of truth. Template for submissions: builds_template.toml
+[[general]]
+item = "Puzzle Ring"
+note = "opens portals to a treasure room: an ancient gives a better map than a normal one; a primal is overkill"
+want = "ancient"
+[[general]]
+item = "Convention of Elements"
+note = "double crit socket"
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+[[general]]
+item = "Squirt's Necklace"
+note = "double crit socket"
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+# ============================================================
+[[build]]
+name = "aov foth"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Flail of the Charge",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Damage %",
+  "Attack Speed",
+  "Strength",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Shield of the Steed",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Fist of the Heavens Damage",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Crown of Valor",
+]
+stat_priority = [
+  "Fist of the Heavens Damage",
+  "Critical Hit Chance",
+  "Socket Flawless Royal Diamond",
+  "Strength",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Gauntlets of Valor",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Cooldown Reduction",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Spaulders of Valor",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Strength",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Brigandine of Valor",
+]
+stat_priority = [
+  "Sockets Flawless Royal Diamond",
+  "All Resistance",
+  "Elite Damage Reduction",
+  "Strength",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Chausses of Valor",
+]
+stat_priority = [
+  "Sockets Flawless Royal Diamond",
+  "All Resistance",
+  "Strength",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Greaves of Valor",
+]
+stat_priority = [
+  "Fist of the Heavens Damage",
+  "All Resistance",
+  "Strength",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Convention of Elements",
+  "Rechel's Ring of Larceny",
+  "The Compass Rose",
+]
+stat_priority = [
+  "Socket",
+  "Cooldown Reduction",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Stone of Jordan",
+  "Unity",
+]
+stat_priority = [
+  "Socket",
+  "Cooldown Reduction",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Nemesis Bracers",
+  "Warzechian Armguards",
+]
+stat_priority = [
+  "Lightning Damage",
+  "Critical Hit Chance",
+  "Strength",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+  "The Traveler's Pledge",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Lightning Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Vigilante Belt",
+]
+stat_priority = [
+  "All Resistance",
+  "Strength",
+  "Life %",
+]
+
+# ============================================================
+[[build]]
+name = "UE ms"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Yang's Recurve",
+]
+stat_priority = [
+  "Maximum Discipline (Secondary)",
+  "Damage %",
+  "Attack Speed",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Dead Man's Legacy",
+]
+stat_priority = [
+  "Maximum Discipline (Secondary)",
+  "Critical Hit Chance",
+  "Multishot Damage",
+]
+notes = [
+  "Maximum Discipline as Secondary is needed on Weapon and Off-Hand for Unhallowed Essence (6) Bonus.",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Accursed Visage",
+]
+stat_priority = [
+  "Multishot Damage",
+  "Socket Flawless Royal Diamond",
+  "Critical Hit Chance",
+  "Dexterity",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Fiendish Grips",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Unsanctified Shoulders",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Resource Cost Reduction",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Cage of the Hellborn",
+]
+stat_priority = [
+  "Maximum Discipline (Secondary)",
+  "Sockets Flawless Royal Diamond",
+  "Dexterity",
+  "Vitality",
+  "Elite Damage Reduction",
+]
+notes = [
+  "Maximum Discipline as Secondary is needed on Cloak for Unhallowed Essence (6) Bonus.",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Unholy Plates",
+]
+stat_priority = [
+  "Dexterity",
+  "Sockets Flawless Royal Diamond",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Hell Walkers",
+]
+stat_priority = [
+  "Multishot Damage",
+  "Dexterity",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Focus",
+  "Stone of Jordan",
+  "The Compass Rose",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Damage Range",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Restraint",
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Damage Range",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Wraps of Clarity",
+  "Nemesis Bracers",
+  "Warzechian Armguards",
+]
+stat_priority = [
+  "Fire Damage",
+  "Critical Hit Chance",
+  "Dexterity",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+  "Traveler's Pledge",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Fire Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Witching Hour",
+]
+stat_priority = [
+  "Critical Hit Damage",
+  "Attack Speed",
+  "Life %",
+  "Vitality",
+]
+
+# ============================================================
+[[build]]
+name = "LoD Nova"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Funerary Pick",
+  "Scythe of the Cycle",
+  "Echoing Fury",
+  "Bloodtide Blade (Cubed)",
+]
+stat_priority = [
+  "Damage %",
+  "Area Damage",
+  "Attack Speed",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Iron Rose",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Death Nova Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Leoric's Crown",
+  "Andariel's Visage",
+]
+stat_priority = [
+  "Death Nova Damage",
+  "Critical Hit Chance",
+  "Socket Flawless Royal Amethyst",
+  "Intelligence",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Stone Gauntlets",
+  "St. Archew's Gage",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Mantle of Channeling",
+]
+stat_priority = [
+  "Intelligence",
+  "Area Damage",
+  "Vitality",
+  "Life %",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Aquila Cuirass",
+]
+stat_priority = [
+  "Intelligence",
+  "Sockets Flawless Royal Topaz",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Blackthorne's Jousting Mail",
+]
+stat_priority = [
+  "Physical Damage",
+  "Intelligence",
+  "Sockets Flawless Royal Topaz",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Steuart's Greaves",
+]
+stat_priority = [
+  "Death Nova Damage",
+  "Intelligence",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Krysbin's Sentence",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Convention of Elements",
+  "Stone of Jordan",
+  "Unity",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Ancient Parthan Defenders",
+  "Strongarm Bracers",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Physical Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Haunted Visions",
+]
+stat_priority = [
+  "Socket",
+  "Physical Damage",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Dayntee's Binding",
+  "The Witching Hour",
+]
+stat_priority = [
+  "Intelligence",
+  "Armor",
+  "Vitality",
+  "Life %",
+]
+
+# ============================================================
+[[build]]
+name = "Trag Nova"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Funerary Pick",
+  "Scythe of the Cycle",
+  "Bloodtide Blade (Cubed)",
+]
+stat_priority = [
+  "Damage %",
+  "Area Damage",
+  "Attack Speed",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Iron Rose",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Death Nova Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Trag'Oul's Guise",
+  "Aughild's Spike (Crafted)",
+  "Guardian's Gaze (Crafted)",
+]
+stat_priority = [
+  "Death Nova Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Trag'Oul's Claws",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Mantle of Channeling",
+  "Aughild's Power (Crafted)",
+  "Trag'Oul's Heart",
+]
+stat_priority = [
+  "Intelligence",
+  "Area Damage",
+  "Vitality",
+  "Life %",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Trag'Oul's Scales",
+  "Aughild's Rule (Crafted)",
+]
+stat_priority = [
+  "Intelligence",
+  "Sockets Flawless Royal Topaz",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Trag'Oul's Hide",
+]
+stat_priority = [
+  "Intelligence",
+  "Sockets Flawless Royal Topaz",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Trag'Oul's Stalwart Greaves",
+  "Steuart's Greaves",
+]
+stat_priority = [
+  "Death Nova Damage",
+  "Intelligence",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Krysbin's Sentence",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Convention of Elements",
+  "Briggs' Wrath",
+  "Ring of Royal Grandeur (A1 Bounties, Cubed)",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Guardian's Aversion (Crafted)",
+  "Aughild's Search (Crafted)",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Physical Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Haunted Visions",
+]
+stat_priority = [
+  "Socket",
+  "Physical Damage",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Dayntee's Binding",
+  "Guardian's Case (Crafted)",
+]
+stat_priority = [
+  "Intelligence",
+  "Armor",
+  "Vitality",
+  "Life %",
+]
+
+# ============================================================
+[[build]]
+name = "Firebird Twister"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Deathwish",
+  "Echoing Fury",
+  "In-geom (Cubed)",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Damage %",
+  "Intelligence",
+]
+notes = [
+  "Ideally, you want a Cold or Lightning Damage Range in order to get an additional stack of Elemental Exposure.",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Orb of Infinite Depth",
+  "Etched Sigil",
+  "Firebird's Eye",
+]
+stat_priority = [
+  "Arcane Power on Critical Hit",
+  "Critical Hit Chance",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Firebird's Plume",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+  "Socket",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Firebird's Talons",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Cooldown Reduction",
+  "Resource Cost Reduction",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Firebird's Pinions",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Resource Cost Reduction",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Firebird's Breast",
+]
+stat_priority = [
+  "Sockets Flawless Royal Topaz",
+  "Intelligence",
+  "Vitality",
+  "Elite Damage Reduction",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Firebird's Down",
+]
+stat_priority = [
+  "Sockets Flawless Royal Topaz",
+  "Intelligence",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Firebird's Tarsi",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Obsidian Ring of the Zodiac",
+]
+stat_priority = [
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Ranslor's Folly",
+]
+stat_priority = [
+  "Fire Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Fire Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Hergbrash's Binding",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Life %",
+  "Armor",
+]
+
+# ============================================================
+[[build]]
+name = "lod wol"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Kyoshiro's Blade",
+  "In-geom",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Area Damage",
+  "Damage %",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Rabid Strike",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Area Damage",
+  "Damage %",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Tzo Krin's Gaze",
+]
+stat_priority = [
+  "Wave of Light Damage",
+  "Socket Flawless Royal Diamond",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Magefist",
+  "Stone Gauntlets",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Lefebvre's Soliloquy",
+  "Mantle of the Upside-Down Sinners",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Area Damage",
+  "Dexterity",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Cindercoat",
+]
+stat_priority = [
+  "Sockets Flawless Royal Emerald",
+  "Dexterity",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Blackthorne's Jousting Mail",
+]
+stat_priority = [
+  "Fire Damage",
+  "Dexterity",
+  "Sockets Flawless Royal Emerald",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "The Crudest Boots",
+]
+stat_priority = [
+  "Wave of Light Damage",
+  "Dexterity",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Cooldown",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Unity",
+  "Stone of Jordan",
+]
+stat_priority = [
+  "Socket",
+  "Cooldown",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Pinto's Pride",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Fire Damage",
+  "Critical Hit Chance",
+  "Dexterity",
+  "Life per Hit",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+  "The Flavor of Time",
+]
+stat_priority = [
+  "Socket",
+  "Fire Damage",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Witching Hour",
+]
+stat_priority = [
+  "Critical Hit Damage",
+  "Attack Speed",
+  "Dexterity",
+  "All Resistance",
+]
+
+# ============================================================
+[[build]]
+name = "Typhon Hydra"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Serpent's Sparker",
+  "Fragment of Destiny",
+  "Aether Walker",
+]
+stat_priority = [
+  "Attack Speed",
+  "Damage %",
+  "Area Damage",
+]
+notes = [
+  "Ideally, you want a Fire or Lightning Damage Range in order to get an additional stack of Elemental Exposure.",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Winter Flurry",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Hydra Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "The Magistrate",
+  "Typhon's Frons",
+]
+stat_priority = [
+  "Sockets Flawless Royal Amethyst",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Typhon's Claws",
+  "Tasker and Theo",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Attack Speed",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Typhon's Tibia",
+]
+stat_priority = [
+  "Hydra Damage",
+  "Resource Cost Reduction",
+  "Area Damage",
+  "Intelligence",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Typhon's Thorax",
+]
+stat_priority = [
+  "Hydra Damage",
+  "Sockets Flawless Royal Topaz",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Typhon's Abdomen",
+]
+stat_priority = [
+  "Intelligence",
+  "Sockets Flawless Royal Topaz",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Typhon's Tarsus",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Halo of Karini",
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Attack Speed",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Stone of Jordan",
+  "Unity",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Ashnagarr's Blood Bracer",
+]
+stat_priority = [
+  "Arcane Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Arcane Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Shame of Delsere",
+  "Hergbrash's Binding",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Life %",
+  "Armor",
+]
+
+# ============================================================
+[[build]]
+name = "LoN HotA"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Remorseless",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Area Damage",
+  "Damage %",
+  "Maximum Fury (Secondary)",
+]
+notes = [
+  "Ideally, you want Maximum Fury as Secondary to scale Hammer of the Ancients Critical Hit Chance.",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Echoing Fury",
+  "In-geom",
+]
+stat_priority = [
+  "Attack Speed",
+  "Damage %",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Leoric's Crown",
+]
+stat_priority = [
+  "Socket Flawless Royal Diamond",
+  "Hammer of the Ancients Damage",
+  "Critical Hit Chance",
+  "Strength",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Stone Gauntlets",
+  "Magefist",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Fury of the Ancients",
+]
+stat_priority = [
+  "Strength",
+  "Cooldown Reduction",
+  "Area Damage",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Cindercoat",
+]
+stat_priority = [
+  "Sockets Flawless Royal Diamond",
+  "Strength",
+  "All Resistance",
+  "Elite Damage Reduction",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Blackthorne's Jousting Mail",
+]
+stat_priority = [
+  "Fire Damage",
+  "Strength",
+  "Sockets Flawless Royal Diamond",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+any_item = true
+sets = false        # optional: leave set pieces out (default true)
+stat_priority = [
+  "Hammer of the Ancients Damage",
+  "Strength",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Stone of Jordan",
+  "Unity",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Band of Might",
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Area Damage",
+  "Damage Range",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Bracers of the First Men",
+  "Mortick's Brace",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Fire Damage",
+  "Critical Hit Chance",
+  "Strength",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+  "The Flavor of Time",
+]
+stat_priority = [
+  "Socket",
+  "Fire Damage",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Witching Hour",
+]
+stat_priority = [
+  "Critical Hit Damage",
+  "Attack Speed",
+  "Strength",
+  "All Resistance",
+]
+
+# ============================================================
+[[build]]
+name = "ww barb"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "In-geom",
+  "Echoing Fury",
+  "Sun Keeper",
+  "The Slanderer",
+  "Messerschmidt's Reaver",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Elite Damage",
+  "Strength",
+  "Damage %",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Ambo's Pride",
+  "Little Rogue",
+]
+stat_priority = [
+  "Cooldown Reduction",
+  "Elite Damage",
+  "Strength",
+  "Damage %",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Helm of the Wastes",
+]
+stat_priority = [
+  "Socket Flawless Royal Diamond",
+  "Critical Hit Chance",
+  "Strength",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Gauntlet of the Wastes",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Pauldrons of the Wastes",
+]
+stat_priority = [
+  "Rend Damage",
+  "Cooldown Reduction",
+  "Strength",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Cuirass of the Wastes",
+]
+stat_priority = [
+  "Rend Damage",
+  "Sockets Flawless Royal Diamond",
+  "Strength",
+  "Elite Damage Reduction",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Tasset of the Wastes",
+]
+stat_priority = [
+  "Sockets Flawless Royal Diamond",
+  "Strength",
+  "All Resistance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Sabaton of the Wastes",
+]
+stat_priority = [
+  "Strength",
+  "All Resistance",
+  "Vitality",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Focus",
+  "Rechel's Ring of Larceny",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Damage Range",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Restraint",
+  "Convention of Elements",
+  "Obsidian Ring of the Zodiac",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Damage Range",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Nemesis Bracers",
+  "Mortick's Brace",
+]
+stat_priority = [
+  "Physical Damage",
+  "Critical Hit Chance",
+  "Strength",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+  "The Flavor of Time",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Physical Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Lamentation",
+]
+stat_priority = [
+  "Strength",
+  "All Resistance",
+  "Vitality",
+  "Life per Fury Spent",
+]
+
+# ============================================================
+[[build]]
+name = "Dreadlands"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Dawn",
+  "Yang's Recurve",
+  "Odyssey's End",
+  "Valla's Bequest",
+  "Fortress Ballista",
+]
+stat_priority = [
+  "Damage %",
+  "Area Damage",
+  "Cooldown Reduction",
+  "Dexterity",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "The Ninth Cirri Satchel",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Hungering Arrow Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Dual-Wield"
+items = [
+  "Dawn",
+  "Valla's Bequest",
+  "Fortress Ballista",
+]
+stat_priority = [
+  "Area Damage",
+  "Dexterity",
+  "Elite Damage",
+  "Damage %",
+]
+notes = [
+  "The difference between dual-wielding and a single weapon is marginal. The former has slightly more Area Damage while the latter has slightly more raw DPS. In general, just go with the best available item and cube the other.",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Dystopian Goggles",
+]
+stat_priority = [
+  "Socket Flawless Royal Diamond",
+  "Dexterity",
+  "Critical Hit Chance",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Gas Powered Automail Forearm",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Cooldown Reduction",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Mechanical Pauldrons",
+]
+stat_priority = [
+  "Dexterity",
+  "Cooldown Reduction",
+  "Area Damage",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Galvanized Vest",
+]
+stat_priority = [
+  "Sockets Flawless Royal Diamond",
+  "Dexterity",
+  "Vitality",
+  "Life %",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Cold Cathode Trousers",
+]
+stat_priority = [
+  "Hungering Arrow damage",
+  "Sockets Flawless Royal Diamond",
+  "Dexterity",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Antique Vintage Boots",
+]
+stat_priority = [
+  "Dexterity",
+  "Vitality",
+  "All Resistance",
+  "Armor",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Focus",
+  "Avarice Band (A3 Bounties)",
+  "Elusive Ring",
+  "Stone of Jordan",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Restraint",
+  "Rechel's Ring of Larceny",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Wraps of Clarity",
+  "Nemesis Bracers",
+  "Warzechian Armguards",
+]
+stat_priority = [
+  "Cold Damage",
+  "Critical Hit Chance",
+  "Dexterity",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Cold Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "Hunter's Wrath",
+]
+stat_priority = [
+  "Hungering Arrow damage",
+  "Dexterity",
+  "Vitality",
+  "Life %",
+]
+
+# ============================================================
+[[build]]
+name = "helltooth garg"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Sacred Harvester",
+  "Echoing Fury",
+]
+stat_priority = [
+  "Attack Speed",
+  "Damage %",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Shukrani's Triumph (Cubed)",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Gargantuan Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Helltooth Mask",
+  "Mask of Jeram",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+  "Socket Flawless Royal Amethyst",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Helltooth Gauntlets",
+  "Tasker and Theo",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Helltooth Mantle",
+]
+stat_priority = [
+  "Gargantuan Damage",
+  "Area Damage",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Helltooth Tunic",
+]
+stat_priority = [
+  "Sockets Flawless Royal Topaz",
+  "Intelligence",
+  "Vitality",
+  "Elite Damage Reduction",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Helltooth Leg Guards",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "Sockets Flawless Royal Topaz",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Helltooth Greaves",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "The Short Man's Finger",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Ring of Emptiness",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Lakumba's Ornament",
+  "Warzechian Armguards",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Physical Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Life per Hit",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Physical Damage",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Witching Hour",
+]
+stat_priority = [
+  "Critical Hit Damage",
+  "Attack Speed",
+  "Intelligence",
+  "Vitality",
+]
+
+# ============================================================
+[[build]]
+name = "arachyr chicken"
+
+[[build.slot]]
+name = "Main-Hand"
+items = [
+  "Manajuma's Carving Knife",
+]
+stat_priority = [
+  "Area Damage",
+  "Damage %",
+]
+
+[[build.slot]]
+name = "Off-Hand"
+items = [
+  "Manajuma's Gory Fetch",
+]
+stat_priority = [
+  "Damage Range",
+  "Critical Hit Chance",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Helm"
+items = [
+  "Arachyr's Visage",
+]
+stat_priority = [
+  "Socket Flawless Royal Diamond",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Gloves"
+items = [
+  "Arachyr's Claws",
+  "St. Archew's Gage",
+]
+stat_priority = [
+  "Critical Hit Chance",
+  "Critical Hit Damage",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Shoulders"
+items = [
+  "Arachyr's Mantle",
+]
+stat_priority = [
+  "Area Damage",
+  "Cooldown Reduction",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Chest"
+items = [
+  "Arachyr's Carapace",
+]
+stat_priority = [
+  "Sockets Flawless Royal Topaz",
+  "Intelligence",
+  "Vitality",
+  "Elite Damage Reduction",
+]
+
+[[build.slot]]
+name = "Pants"
+items = [
+  "Arachyr's Legs",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "Sockets Flawless Royal Topaz",
+]
+
+[[build.slot]]
+name = "Boots"
+items = [
+  "Arachyr's Stride",
+]
+stat_priority = [
+  "Intelligence",
+  "Vitality",
+  "Armor",
+  "All Resistance",
+]
+
+[[build.slot]]
+name = "Ring 1"
+items = [
+  "Ring of Emptiness",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Ring 2"
+items = [
+  "Convention of Elements",
+]
+stat_priority = [
+  "Socket",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+  "Area Damage",
+]
+
+[[build.slot]]
+name = "Bracers"
+items = [
+  "Lakumba's Ornament",
+  "Warzechian Armguards",
+  "Nemesis Bracers",
+]
+stat_priority = [
+  "Poison Damage",
+  "Critical Hit Chance",
+  "Intelligence",
+  "Vitality",
+]
+
+[[build.slot]]
+name = "Amulet"
+items = [
+  "Squirt's Necklace",
+]
+stat_priority = [
+  "Socket",
+  "Poison Damage",
+  "Critical Hit Damage",
+  "Critical Hit Chance",
+]
+
+[[build.slot]]
+name = "Belt"
+items = [
+  "The Witching Hour",
+]
+stat_priority = [
+  "Critical Hit Damage",
+  "Attack Speed",
+  "Intelligence",
+  "Vitality",
+]

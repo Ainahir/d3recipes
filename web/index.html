@@ -1,0 +1,294 @@
+<!doctype html>
+<!--
+  Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
+  credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>d3recipes</title>
+<meta name="description" content="Targeted crafting recipes for Diablo 3 on consoles: the cheapest Kanai's Cube path to the item you want.">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+<script>
+  // Apply a saved theme before first paint so there is no flash. No saved choice = follow the system setting.
+  try { const t = localStorage.getItem("d3r-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    --bg: #14110f; --card: #1e1a17; --line: #362f29; --text: #ece4da; --dim: #a39684; --accent: #d9a441; --accent-ink: #1a1408;
+    --good: #7cc47c; --warn: #e0a24a; --bad: #e07a6a; --chip: #2c261f;
+    --tex-rgb: 255, 240, 220; --tex-a: .045;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --bg: #f3ede2; --card: #fbf8f1; --line: #ddd2c3; --text: #2a231c; --dim: #74675a; --accent: #9a6a12; --accent-ink: #fff;
+      --good: #2f7d2f; --warn: #a8690c; --bad: #b3432f; --chip: #efe6d8;
+      --tex-rgb: 110, 90, 60; --tex-a: .10;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3ede2; --card: #fbf8f1; --line: #ddd2c3; --text: #2a231c; --dim: #74675a; --accent: #9a6a12; --accent-ink: #fff;
+    --good: #2f7d2f; --warn: #a8690c; --bad: #b3432f; --chip: #efe6d8;
+    --tex-rgb: 110, 90, 60; --tex-a: .10;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14110f; --card: #1e1a17; --line: #362f29; --text: #ece4da; --dim: #a39684; --accent: #d9a441; --accent-ink: #1a1408;
+    --good: #7cc47c; --warn: #e0a24a; --bad: #e07a6a; --chip: #2c261f;
+    --tex-rgb: 255, 240, 220; --tex-a: .045;
+  }
+  * { box-sizing: border-box; }
+  /* A faint eggshell / card-stock grain: SVG turbulence noise tinted by --tex-rgb, tiled over the page and the cards. */
+  body {
+    margin: 0; background-color: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.25'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  /* the grain above is white-on-transparent noise; --tex-rgb tints it by blending a colour layer under it */
+  body { background-blend-mode: overlay; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 16px; }
+  h1 { margin: 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  a { color: var(--accent); }
+  .card {
+    background-color: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 1px 3px rgba(0,0,0,.12);
+  }
+  label { display: block; font-size: .85rem; color: var(--dim); margin: 8px 0 3px; }
+  select, input[type=text], input[type=number] {
+    width: 100%; padding: 10px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 4px 10px; }
+  .opts input[type=number] { padding: 6px 8px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+  .banner-wrap { max-width: 760px; margin: -16px auto 0; padding: 8px 0 0; }
+  .banner { display: block; width: 100%; height: auto; margin: 0; }
+  :root[data-theme="dark"] .banner { filter: drop-shadow(0 0 1px rgba(255,236,200,.5)) drop-shadow(0 0 12px rgba(217,164,65,.22)); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme]) .banner { filter: drop-shadow(0 0 1px rgba(255,236,200,.5)) drop-shadow(0 0 12px rgba(217,164,65,.22)); } }
+  .tagline { margin: 0 0 10px; color: var(--text); }
+  /* header ornament: the animated crafting-materials fan, sitting on a hairline rule */
+  .orn { display: flex; align-items: center; gap: 12px; margin: 4px 0 6px; }
+  .orn::before, .orn::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+  .orn img { display: block; height: 64px; width: auto; }
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
+  .small { font-size: .85rem; color: var(--dim); }
+
+  /* season / mode bar + theme toggle */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 12px; }
+  .ctx { color: var(--dim); }
+  .ctx b { color: var(--text); font-weight: 600; }
+  button.link { background: none; border: 0; padding: 0; margin-left: 4px; font: inherit; font-size: .9rem; color: var(--accent); cursor: pointer; text-decoration: underline; }
+  button.icon { background: var(--card); border: 1px solid var(--line); color: var(--text); width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; flex: none; }
+  #ctxEdit { margin: -4px 0 12px; }
+
+  /* pickers */
+  .chips { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+  .chip { display: flex; align-items: center; gap: 8px; background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .chip span { flex: 1; }
+  .chip .hint, .pick .hint { color: var(--dim); font-size: .85em; }
+  .chip input { width: 84px; padding: 6px; }
+  .chip button { background: none; border: 0; color: var(--dim); font-size: 1.2rem; cursor: pointer; padding: 0 4px; }
+  .pick { max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; margin-top: 6px; background: var(--card); }
+  .pick div { padding: 9px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .pick div:last-child { border-bottom: 0; }
+  .pick div.active { background: var(--chip); }
+  /* keyboard hints: an Enter marker on the highlighted row, and a keycap legend pinned to the list's foot (hidden on touch screens) */
+  .pick div.active::after { content: "↵"; float: right; color: var(--dim); }
+  .pick .keys { position: sticky; bottom: 0; cursor: default; background: var(--card); color: var(--dim); font-size: .78rem; border-top: 1px solid var(--line); padding: 6px 10px; }
+  .pick .keys kbd { display: inline-block; min-width: 1.5em; text-align: center; margin-right: 2px; padding: 0 4px; font: inherit; color: var(--text); background: var(--chip); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; }
+  .pick .keys kbd:not(:first-child) { margin-left: 2px; }
+  @media (hover: none) { .pick .keys, .pick div.active::after { display: none; } }
+  .pick div.active { box-shadow: inset 3px 0 0 var(--accent); }
+  details summary { cursor: pointer; color: var(--dim); }
+  button.go { width: 100%; padding: 14px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 10px; cursor: pointer; }
+  button.go:disabled { opacity: .5; cursor: default; }
+  #status { color: var(--dim); font-size: .9rem; margin: 10px 2px; min-height: 1.3em; }
+
+  /* results */
+  .goalline { color: var(--dim); font-size: .92rem; margin: -4px 0 6px; }
+  .hit { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+  .hit:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+  .tag { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip); }
+  .t-best { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .t-primal { color: var(--accent); border-color: var(--accent); }
+  .t-ancient { color: var(--good); border-color: var(--good); }
+  .t-normal { color: var(--dim); }
+  .aff { font-weight: 600; }
+  .aff .want { color: var(--accent); }
+  .aff .extra { color: var(--dim); font-weight: 400; }
+  .aff .miss { color: var(--dim); font-weight: 400; text-decoration: line-through; text-decoration-thickness: 1px; }
+  ul.steps { margin: 8px 0 8px; padding-left: 20px; }
+  ul.steps li { margin: 2px 0; }
+  ul.steps .note { color: var(--dim); font-size: .9em; }
+  .mats { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+  .mat { position: relative; width: 52px; height: 52px; border-radius: 9px; display: block; overflow: hidden; }
+  .mat img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .mat.wide { width: auto; overflow: visible; }
+  .mat.wide img { width: auto; height: 100%; }
+  .mat .fb { border-radius: 9px; position: absolute; inset: 0; display: grid; place-items: center; font-size: .72rem; font-weight: 700; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.5); }
+  .mat .n { position: absolute; right: 2px; bottom: 1px; font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; padding: 1px 3px; border-radius: 4px; color: #fff; background: rgba(0,0,0,.72); }
+  .full { margin-top: 6px; }
+  .full summary { font-size: .85rem; }
+  .lines { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; font-size: .9rem; margin: 6px 0; max-width: 460px; }
+  .lines .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .lines .want { color: var(--accent); font-weight: 600; }
+  .empty { color: var(--dim); }
+  .warn { color: var(--warn); font-size: .9rem; }
+  footer { color: var(--dim); font-size: .8rem; margin: 20px auto 40px; max-width: 760px; text-align: center; }
+  footer .orn img { height: 56px; }
+  /* layout: one nav element, two looks. Narrow screens: a strip of buttons pinned to the top that scrolls sideways.
+     Wide screens: the same buttons become a borderless column beside the content. */
+  header.top { max-width: 760px; margin: 0 auto; }
+  #home { display: block; }
+  .shell { display: block; }
+  nav#nav { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 8px 0; margin: 0 0 12px;
+    background: var(--bg); border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+  nav#nav .grp { display: contents; }
+  nav#nav .gl { flex: none; margin-left: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  nav#nav button.nb { flex: none; font: inherit; font-size: .92rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  nav#nav button.nb[aria-current="page"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  nav#nav button.nb.mode { border-style: dashed; }
+  nav#nav .gl.top { display: none; }
+  #content { min-width: 0; max-width: 760px; }
+  @media (min-width: 900px) {
+    /* the banner and the content share one column, so the banner lines up with the cards below it */
+    .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto 1fr auto; column-gap: 28px; align-items: start; }
+    header.top { grid-column: 2; grid-row: 1; margin: 0; width: 100%; }
+    #content { grid-column: 2; grid-row: 2; width: 100%; }
+    footer { grid-column: 2; grid-row: 3; margin: 20px 0 40px; width: 100%; }
+    nav#nav { grid-column: 1; grid-row: 1 / span 3; position: sticky; top: 12px; flex-direction: column; align-items: stretch; gap: 2px; overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 24px);
+      margin: 0; padding: 0; background: none; border: 0; }
+    nav#nav .grp { display: block; }
+    nav#nav .gl { display: block; margin: 16px 0 4px 10px; }
+    nav#nav .gl.top { display: block; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    nav#nav button.nb { width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 8px 10px; }
+    nav#nav button.nb:hover { background: var(--chip); }
+    nav#nav button.nb[aria-current="page"] { color: var(--text); background: var(--chip); border-left-color: var(--accent); }
+    .banner-wrap { margin-left: 0; margin-right: 0; }
+    header.top .tagline { text-align: center; }
+  }
+
+  /* prepared builds */
+  .bhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; }
+  .bhead h2 { font-size: 1.3rem; margin: 0; }
+  section.slot.single, details.rec[open] > .body { cursor: pointer; }
+  .slot h3 { margin: 0 0 8px; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  details.rec { border-top: 1px solid var(--line); padding: 8px 0; }
+  details.rec:first-of-type { border-top: 0; padding-top: 0; }
+  details.rec > summary { color: var(--text); list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline; }
+  details.rec > summary::-webkit-details-marker { display: none; }
+  details.rec > summary::after { content: "\25B8"; grid-row: 1; grid-column: 2; justify-self: end; color: var(--dim); }
+  details.rec[open] > summary::after { content: "\25BE"; }
+  .rec .nm { font-weight: 600; font-size: 1.02rem; }
+  .rec .nm .cb { font-weight: 400; color: var(--dim); font-size: .85em; }
+  .rec .meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  details.rec > summary.noname .meta { grid-column: 1; }
+  .rec .cost { color: var(--dim); font-size: .85rem; }
+  .rec .body { padding: 6px 0 4px; }
+  .rec .mk { margin: 0 0 4px; font-weight: 600; }
+  .rec .cheap { margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .modeflag { margin: 0 0 12px; }
+  dialog#rules { max-width: 440px; width: calc(100% - 32px); padding: 20px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  dialog#rules::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog#rules h2 { margin: 0 0 8px; font-size: 1.15rem; text-align: center; }
+  dialog#rules ul { margin: 0 0 16px; padding-left: 20px; }
+  dialog#rules li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<dialog id="rules" aria-labelledby="rulesTitle">
+  <h2 id="rulesTitle">Before you start</h2>
+  <p class="small">Every recipe here assumes these. Skipping one is the usual reason a result doesn&rsquo;t match.</p>
+  <ul>
+    <li>Use a <b>fresh level 1 seasonal hero</b>.</li>
+    <li>Don&rsquo;t gain <b>any XP</b>, including in town by reading Haedrig&rsquo;s book.</li>
+    <li>Don&rsquo;t do <b>any earlier transmutes</b> on the slot.</li>
+    <li>Follow the steps <b>in order</b>.</li>
+    <li>Check each intermediate item against the stats shown, and <b>stop if one doesn&rsquo;t match</b>.</li>
+  </ul>
+  <button type="button" class="go" id="rulesOk">I understand</button>
+</dialog>
+<div class="page">
+<div class="shell">
+<header class="top">
+  <div class="banner-wrap"><h1><a href="./" id="home" title="Back to the start"><img class="banner" src="banner.webp" alt="d3recipes"></a></h1></div>
+  <p class="tagline">Targeted Crafting Recipes for Diablo 3 on Consoles</p>
+  <div class="orn" aria-hidden="true"><picture><source media="(prefers-reduced-motion: reduce)" srcset="icons/flourish-still.webp"><img src="icons/flourish.webp" alt="" width="107" height="64"></picture></div>
+  <p class="small">Recipes only work on brand new level 1 seasonal characters &mdash; go directly to Adventure Mode and do not gain any XP before crafting.</p>
+
+  <div class="bar">
+    <div class="ctx">Results for <b id="ctxText">Season 40 &middot; Softcore</b> <button type="button" class="link" id="ctxBtn" aria-expanded="false" aria-controls="ctxEdit">change</button></div>
+    <button type="button" class="icon" id="theme" title="Switch light / dark" aria-label="Switch light or dark theme">&#9790;</button>
+  </div>
+  <section class="card" id="ctxEdit" hidden>
+    <div class="row">
+      <div><label for="season">Season</label><input id="season" type="number" min="1" value="40"></div>
+      <div><label for="hc">Mode</label><select id="hc"><option value="0" selected>Softcore</option><option value="1">Hardcore</option></select></div>
+    </div>
+  </section>
+
+</header>
+  <nav id="nav" aria-label="Prepared builds and custom search"></nav>
+  <main id="content">
+    <section id="viewBuild" hidden></section>
+    <section id="viewSearch">
+  <div id="loading" class="card">Loading the item tables&hellip;</div>
+
+  <div id="app" hidden>
+    <section class="card">
+      <h2>1. Class and item</h2>
+      <label for="cls">Class</label>
+      <select id="cls"></select>
+      <label for="itemFind">Item you want</label>
+      <div id="itemChips" class="chips"></div>
+      <input id="itemFind" type="text" placeholder="Search items: crown, boots, quiver&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="itemPick">
+      <div id="itemPick" class="pick" role="listbox" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>2. Stats you want</h2>
+      <div id="chips" class="chips"></div>
+      <input id="find" type="text" placeholder="Search stats: crit, cooldown, dexterity, multishot&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="pick">
+      <div id="pick" class="pick" role="listbox" hidden></div>
+      <p class="small" style="margin:8px 0 0">Pick as many as you like. Recipes that land all of them are listed first; if one stat is missing, the Mystic can usually add it.</p>
+      <details style="margin-top:10px">
+        <summary>Costs and Limits</summary>
+        <p class="small" style="margin:10px 0 0">Relative cost of one step of each kind. The search finds the recipe with the lowest total by these weights, so only the ratios matter.</p>
+        <div class="opts">
+          <div><label for="cc">Convert Set Item</label><input id="cc" type="number" min="0.01" step="any" value="0.75"></div>
+          <div><label for="ch">Hope of Cain</label><input id="ch" type="number" min="0.01" step="any" value="1"></div>
+          <div><label for="cr">Reforge</label><input id="cr" type="number" min="0.01" step="any" value="5"></div>
+          <div><label for="cp">Improve Legendary</label><input id="cp" type="number" min="0.01" step="any" value="25"></div>
+        </div>
+        <div class="opts">
+          <div><label for="floor" title="Minimum roll for a wanted stat on ancient and legendary results, as a percentage of its maximum. Primals are always maximum.">Good roll (%)</label><input id="floor" type="number" min="0" max="100" value="75"></div>
+          <div><label for="top">Recipes shown</label><input id="top" type="number" min="1" max="6" value="1"></div>
+          <div><label for="secs">Time limit (s)</label><input id="secs" type="number" min="1" max="120" value="15"></div>
+        </div>
+      </details>
+    </section>
+
+    <button id="go" class="go">Find Recipes</button>
+    <div id="status"></div>
+    <div id="out"></div>
+  </div>
+
+    </section>
+  </main>
+  <footer>
+    <div class="orn" aria-hidden="true"><picture><source media="(prefers-reduced-motion: reduce)" srcset="icons/footer-still.webp"><img src="icons/flourish-footer.webp" alt="" height="56"></picture></div>
+    <p><button type="button" class="link" id="rulesBtn">Before you start</button></p>
+    <p>Thanks to Blizzard Entertainment for thirty years of Diablo, to jester (d3hack) for making offline seasons possible, and to Maxroll for the build guides. <a href="https://github.com/FNGarvin/d3recipes/blob/main/LICENSE">License</a>.</p>
+    <p>Questions or suggestions? <a href="https://github.com/FNGarvin/d3recipes">Let us know on GitHub</a>.</p>
+    <p>d3recipes is a fan-made tool, not affiliated with or endorsed by Blizzard Entertainment. Diablo&reg; III is a trademark or registered trademark of Blizzard Entertainment, Inc. Crafting-material icons depict items from the game and are &copy; Blizzard Entertainment, Inc.; they are shown for identification only.</p>
+  </footer>
+</div>
+
+</div>
+<script type="module" src="builds.js?v=e4b80d36a7"></script>
+<script type="module" src="app.js?v=e4b80d36a7"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# ---- Submit a precomputed build: copy this block, fill it in, paste it at the end of builds.toml ----
+# Names are matched against the game's item list (apostrophes / "The " don't matter). Stat lines are free text
+# ("Cooldown Reduction", "Socket Flawless Royal Diamond", ...); list them best-first. The tool uses the first two
+# that the item can actually roll TOGETHER, and the third as the Mystic-fixable stat. If you name only two, a natural primal
+# carrying ONE of them counts and the Mystic adds the other.
+# Item tags: "(Cubed)" = worn in the cube slot (still searched, marked in the output),
+#            "(Crafted)" / "(... Bounties ...)" = skipped (not obtainable through the cube).
+# Slots: Main-Hand, Off-Hand, Dual-Wield, Helm, Gloves, Shoulders, Chest, Pants, Boots, Ring 1, Ring 2,
+#        Bracers, Amulet, Belt, Cloak, Potion (skipped) ... Every alternate in `items` gets its own answer.
+
+[[build]]
+name = "Example FoH Crusader"
+# class = "Crusader"     # optional (DemonHunter, Barbarian, Wizard, WitchDoctor, Monk, Crusader, Necromancer); normally inferred
+
+[[build.slot]]
+name = "Main-Hand"
+items = ["Flail of the Charge", "Darklight (Cubed)"]
+stat_priority = [
+  "Damage Range",
+  "Cooldown Reduction",
+  "Attack Speed",
+]
+# notes = ["free-text advice shown with the row"]   # optional
+
+[[build.slot]]
+name = "Helm"
+items = ["Crown of Valor", "Leoric's Crown", "Sage's Apogee (Crafted)"]
+stat_priority = ["Fist of the Heavens Damage", "Critical Hit Chance", "Socket Flawless Royal Diamond"]
+
+# ---- A staple: an item worth having on ANY class (searched on all seven; the page shows the cheapest class per tier) ----
+# [[general]]
+# item = "Convention of Elements"
+# note = "double crit"                                   # optional, shown under the item
+# stat_priority = ["Socket", "Critical Hit Chance", "Critical Hit Damage"]   # optional (up to 3); omit for "any stats"
+# want = "ancient"                                        # optional: "primal" (default, a natural primal) or "ancient"
+# label = "Cheap primal for salvaging"                   # optional heading over the recipe
+
+# ---- A slot where you do not care which item: the cheapest natural primal with your stats, whatever the item ----
+# [[build.slot]]
+# name = "Boots"                 # armor and jewelry slots only (not weapons, shields or "Off-Hand")
+# any_item = true                # no items list
+# sets = false                   # optional: leave set pieces out (default true)
+# stat_priority = ["Strength", "All Resistance"]

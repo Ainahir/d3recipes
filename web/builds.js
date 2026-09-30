@@ -1,0 +1,223 @@
+// Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
+// credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
+// Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
+// (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=e4b80d36a7";
+import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=e4b80d36a7";
+
+const $ = (id) => document.getElementById(id);
+const V = new URL(import.meta.url).searchParams.get("v");
+const qs = V && V !== "0" ? `?v=${V}` : "";
+
+const cache = {};                 // "sc" | "hc" -> Promise<{season, builds}>
+let route = "search";             // "search" (the start page) | "staples" | build id
+let current = null;               // loaded data for the active mode
+
+const modeKey = () => ($("hc").value === "1" ? "hc" : "sc");
+const className = (c) => CLASS_NAMES[c] || c;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function load(key) {
+  if (!cache[key]) {
+    cache[key] = fetch(`./premade_${key}.json${qs}`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .catch((e) => { delete cache[key]; throw e; });
+  }
+  return cache[key];
+}
+
+// ---------- recipe -> the shapes recipe.js renders ----------
+
+const marker = (m) => ({ name: m[0], quality: m[1], lines: m[2] ? [{ stem: m[2], value: m[3] }] : [] });
+
+function hitOf(row, path, lin) {
+  const route = [];
+  for (const ch of path) {
+    const last = route[route.length - 1];
+    if (last && last[0] === ch) last[1] += 1; else route.push([ch, 1]);
+  }
+  // checkpoint k = the item after the first k groups of steps (0 = the Hope of Cain item)
+  const checkpoints = [marker(lin[0])];
+  let at = 0;
+  for (const [, n] of route) { at += n; checkpoints.push(marker(lin[Math.min(at, lin.length - 1)])); }
+  return { hope: row.n, slot: row.rs, route, checkpoints, root_name: lin[0][0], name: lin[lin.length - 1][0] };
+}
+
+// Cost in Reforge-equivalents with the prices the search minimises (Hope of Cain 2, Reforge 1, Convert 1, Improve Legendary 25), and the plain
+// number of actions (crafts + operations). Cost is what you pay in materials; steps is how long it takes.
+const PRICE = { R: 1, C: 1, P: 25 };
+const costOf = (n, path) => 2 * n + [...path].reduce((a, c) => a + (PRICE[c] || 0), 0);
+const stepsOf = (n, path) => n + path.length;
+const COST_TIP = "Cost in Reforges: Hope of Cain 2, Reforge 1, Convert Set Item 1, Improve Legendary 25. Steps: crafts plus operations.";
+// The numbers are for the site's owner (deciding what to ship), not for players, whose materials row says what a recipe costs:
+// they only show when the address carries ?costs.
+const SHOW_COSTS = new URLSearchParams(location.search).has("costs");
+const costHtml = (n, path) => (SHOW_COSTS ? `<span class="cost" title="${COST_TIP}">cost ${costOf(n, path)} &middot; ${stepsOf(n, path)} steps</span>` : "");
+
+const linesOf = (tt) => tt.map(([stem, value, max]) => ({ stem, value, max }));
+
+function fullTooltip(tt, need) {
+  if (!tt) return "";
+  const want = new Set(need);
+  const rows = tooltipRows(linesOf(tt)).map((r) => {
+    const w = want.has(r.stem);
+    return `<span class="${w ? "want" : ""}">${r.label}</span><span class="v ${w ? "want" : ""}">${r.value}</span>`;
+  }).join("");
+  return `<details class="full" open><summary>Full tooltip</summary><div class="lines">${rows}</div></details>`;
+}
+
+function recipeBody(row, path, lin, tt, note = "", tooltip = true) {
+  const h = hitOf(row, path, lin);
+  const mats = matsHtml(materials(h));
+  return (row.intro ? `<p class="mk">${row.intro}</p>` : "") + stepsHtml(h, [], new Set(row.need)) + note + `<div class="mats">${mats}</div>` + (tooltip ? fullTooltip(tt, row.need) : "");
+}
+
+const QUALITY = { primal: ["Primal", "t-primal"], crafted: ["Crafted primal", "t-primal"], ancient: ["Ancient", "t-ancient"], normal: ["Legendary", "t-normal"] };
+
+function rowHtml(row, tooltip = true) {
+  const name = !row.item ? "" : `<span class="nm">${esc(row.item)}${row.cubed ? ' <span class="cb">(cubed)</span>' : ""}${row.any ? ' <span class="cb">(any item)</span>' : ""}</span>`;
+  if (!row.found) {
+    return `<div class="rec"><div class="nm">${esc(row.item)}</div><div class="small">No natural primal turned up within the search limits. Try refining the search in <a href="./" data-route="search">Custom search</a>.</div></div>`;
+  }
+  const [qt, qc] = QUALITY[row.q] || QUALITY.normal;
+  const stats = row.need.map((s) => `<span class="want">${esc(statAbbr(s))}</span>`).join(", ");
+  const mystic = row.mystic ? ` <span class="small">+ Mystic: ${esc(statName(row.mystic))}</span>` : "";
+  const craftedNote = row.q === "crafted" ? `<div class="small">Improve Legendary primals: only one can be worn per character.</div>` : "";
+  const cheap = (row.cheap || []).map((c) => {
+    const [t] = QUALITY[c.q] || QUALITY.normal;
+    return `<details class="full cheap"><summary>Cheaper: ${t.toLowerCase()}${SHOW_COSTS ? `, cost ${costOf(row.n, c.path)} (${stepsOf(row.n, c.path)} steps)` : ""}</summary>${recipeBody(row, c.path, c.lin, c.tt, "", tooltip)}</details>`;
+  }).join("");
+  return `<details class="rec"><summary${row.item ? "" : ' class="noname"'}>${name}
+    <span class="meta"><span class="tag ${qc}">${qt}</span><span class="aff">${stats}</span>${mystic}${costHtml(row.n, row.path)}</span></summary>
+    <div class="body">${recipeBody(row, row.path, row.lin, row.tt, craftedNote, tooltip)}${cheap}</div></details>`;
+}
+
+function buildHtml(b, data) {
+  const slots = [];
+  for (const r of b.rows) {
+    const last = slots[slots.length - 1];
+    if (last && last.name === r.slot) last.rows.push(r); else slots.push({ name: r.slot, rows: [r] });
+  }
+  const sc = data.hardcore ? "Hardcore" : "Softcore";
+  const head = `<div class="bhead"><h2>${esc(b.title)}</h2><span class="small">${esc(className(b.class))} &middot; Season ${data.season} &middot; ${sc}</span></div>`;
+  const note = +$("season").value !== data.season
+    ? `<div class="warn modeflag">These recipes are for season ${data.season}. Other seasons roll different items, so they will not match.</div>` : "";
+  const cards = slots.map((s) => `<section class="card slot"><h3>${esc(s.name)}</h3>${s.rows.map((r) => rowHtml(r)).join("")}</section>`).join("");
+  return head + note + cards;
+}
+
+// ---------- staples: class-agnostic items, each made on whichever class is cheapest ----------
+
+function staplesHtml(data) {
+  const sc = data.hardcore ? "Hardcore" : "Softcore";
+  const head = `<div class="bhead"><h2>Staples</h2><span class="small">Any class &middot; Season ${data.season} &middot; ${sc}</span></div>
+    <p class="small" style="margin:0 0 12px">Items worth having whatever you play. The Hope of Cain chain differs per class, so each is made on the class where it is cheapest.</p>`;
+  const cards = data.staples.map((st) => {
+    const t = st.tier;
+        const body = t ? rowHtml({ ...t.row, item: st.label, intro: `Make a ${esc(className(t.class))}`, cubed: false, mystic: null }, t.row.need.length > 0) : '<div class="small">No route found.</div>';
+    return `<section class="card slot"><h3>${esc(st.item)}</h3>${st.note ? `<p class="small" style="margin:0 0 8px">${esc(st.note)}</p>` : ""}${body}</section>`;
+  }).join("");
+  return head + cards;
+}
+
+// ---------- cheapest natural primal per slot, for salvaging ----------
+
+function salvageHtml(data) {
+  const sc = data.hardcore ? "Hardcore" : "Softcore";
+  const head = `<div class="bhead"><h2>Cheap primal for salvaging</h2><span class="small">Any class &middot; Season ${data.season} &middot; ${sc}</span></div>
+    <p class="small" style="margin:0 0 12px">The quickest natural primal in each slot, any item, on whichever class is cheapest. Improve Legendary is never used, so none of this costs Primordial Ashes. Cheapest first.</p>`;
+  const rows = data.salvage.map((a) => {
+    const r = a.row;
+    const slot = SLOT_NAMES[a.slot] || a.slot;
+    return `<details class="rec"><summary><span class="nm">${esc(slot)}</span>
+      <span class="meta"><span class="aff">Make a ${esc(className(a.class))}</span>${costHtml(r.n, r.path)}</span></summary>
+      <div class="body">${recipeBody(r, r.path, r.lin, r.tt, `<div class="small">You get: ${esc(r.item)}</div>`, false)}</div></details>`;
+  }).join("");
+  return head + `<section class="card slot">${rows || '<div class="small">Nothing found.</div>'}</section>`;
+}
+
+// ---------- navigation ----------
+
+function navHtml(data) {
+  const groups = [];
+  for (const b of data.builds) {
+    let g = groups.find((x) => x.cls === b.class);
+    if (!g) groups.push(g = { cls: b.class, list: [] });
+    g.list.push(b);
+  }
+  const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${id}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
+  return `<div class="grp">${btn("search", "Custom search", "mode")}</div>` +
+    (data.staples && data.staples.length ? `<div class="grp"><span class="gl">Any class</span>${btn("staples", "Staples")}${data.salvage && data.salvage.length ? btn("salvage", "Cheap primals") : ""}</div>` : "") +
+    `<div class="grp"><span class="gl top">Builds</span></div>` +
+    groups.map((g) => `<div class="grp"><span class="gl">${esc(className(g.cls))}</span>${g.list.map((b) => btn(b.id, esc(b.title))).join("")}</div>`).join("");
+}
+
+function show() {
+  const isBuild = route !== "search";   // "staples" and every build id share the build view
+  $("viewSearch").hidden = route !== "search";
+  $("viewBuild").hidden = !isBuild;
+  if (current) {
+    $("nav").innerHTML = navHtml(current);
+    const on = $("nav").querySelector('[aria-current="page"]');
+    // centre the current build inside the nav only (scrollIntoView would also scroll the page)
+    const nav = $("nav");
+    if (on) nav.scrollTo({ left: on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2, top: on.offsetTop - (nav.clientHeight - on.offsetHeight) / 2 });
+  }
+  if (isBuild && current) {
+    const b = current.builds.find((x) => x.id === route);
+    $("viewBuild").innerHTML = route === "staples" ? staplesHtml(current) : route === "salvage" ? salvageHtml(current) : b ? buildHtml(b, current) : `<div class="card empty">No such build.</div>`;
+    // a card holding exactly one recipe opens from a click anywhere on it (see the click handler below)
+    $("viewBuild").querySelectorAll("section.slot").forEach((c) => c.classList.toggle("single", c.querySelectorAll(":scope > details.rec").length === 1));
+  }
+}
+
+function go(next, push = true) {
+  route = next;
+  if (push) history.pushState(null, "", next === "search" ? location.pathname + location.search : "#" + next);
+  show();
+  window.scrollTo({ top: 0 });
+}
+
+function fromHash() {
+  const h = decodeURIComponent(location.hash.replace(/^#/, ""));
+  route = h || "search";
+  if (!["search", "staples", "salvage"].includes(route) && current && !current.builds.some((b) => b.id === route)) route = "search";
+}
+
+async function refresh() {
+  try {
+    current = await load(modeKey());
+  } catch (e) {
+    $("nav").innerHTML = `<span class="small">Could not load the prepared builds (${esc(e.message)}). Custom search still works.</span>`;
+    return;
+  }
+  fromHash();
+  show();
+}
+
+// Recipes open and close from a click almost anywhere: on the card around a single recipe, or on the recipe itself (its summary
+// already toggles natively, so nested summaries and links are left alone). Selecting text never counts as a click.
+$("viewBuild").addEventListener("click", (e) => {
+  const link = e.target.closest("a[data-route]");
+  if (link) { e.preventDefault(); go(link.dataset.route); return; }
+  if (String(window.getSelection()).length || e.target.closest("a, button")) return;
+  const rec = e.target.closest("details.rec");
+  if (rec) {
+    if (e.target.closest("summary")) return;          // the recipe's own summary, or a nested one (tooltip, cheaper option): native toggle
+    rec.open = !rec.open;
+    return;
+  }
+  const card = e.target.closest("section.slot.single");
+  if (card) { const r = card.querySelector(":scope > details.rec"); r.open = !r.open; }
+});
+$("home").addEventListener("click", (e) => { e.preventDefault(); go("search"); });
+$("nav").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-route]");
+  if (b) go(b.dataset.route);
+});
+window.addEventListener("popstate", () => { fromHash(); show(); });
+$("hc").addEventListener("change", refresh);
+$("season").addEventListener("input", show);
+// nav is empty until the data arrives; the search view alone must work if the fetch fails, so show it at once.
+fromHash();
+$("viewSearch").hidden = route !== "search";
+refresh();
