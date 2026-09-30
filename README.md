@@ -25,7 +25,7 @@ Open the site (`web/index.html` served by any static server, or the [GitHub Page
 
 1. Pick softcore or hardcore and season number (default: softcore, season 40).
 2. Select a class, an item, and (optionally) a set of affixes.
-3. Optionally, expand the Costs and Limits section to define the scope of the search. (todo: explain the cost ratio system and solicit input)
+3. Optionally, expand the Costs and Limits section to define the scope of the search.
 4. Press **Find Recipes**.
 
 **IMPORTANT**: Recipes assume a fresh level-1 seasonal hero that has performed no previous transmutes and has gained no XP. Even just entering campaign before joining adventure mode or reading Haedrig's book can be enough to break a recipe.
