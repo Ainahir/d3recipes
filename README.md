@@ -10,6 +10,7 @@
 <p align="center">
   <a href="https://fngarvin.github.io/d3recipes/">Open the site</a> &middot;
   <a href="#requesting-a-build-preset">Request a build</a> &middot;
+  <a href="#changelog">Changelog</a> &middot;
   <a href="LICENSE">License</a>
 </p>
 
@@ -62,6 +63,14 @@ wasm-pack build --release --target web --out-dir ../web/pkg
 ```
 
 Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:8765`.
+
+## Changelog
+
+**2026-10-04**
+
+- Fixed natural primal weapons: they never roll a socket, and a socket slot left open is replaced by an extra primary affix. The last Reforge of a weapon route now gives the affixes the game gives.
+- Fixed the prepared builds' stat values for non-primal items. The rolls built into an item itself (such as a shield's) were skipped, so the "stop on" numbers and the cheaper legendary and ancient stop-offs were off. Which affixes an item gets, and every primal result, were already correct.
+- The Mystic suggestion no longer picks a weapon's damage range to reroll, and picks the main stat only when nothing else is spare.
 
 ## License
 
