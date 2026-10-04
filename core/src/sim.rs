@@ -428,10 +428,15 @@ impl Sim {
         for _ in 0..extra {
             rng.draw();
         }
+        // a primal weapon never rolls a socket; a fixed slot left unresolved by that is replaced by one primary pick made first
+        let weapon_primal = primal && item.weapon;
+        self.ban_sockets = weapon_primal;
         let mut existing = Vec::with_capacity(6);
-        self.fixed_slots(item, &mut rng, swaps, &mut existing);
+        let unresolved = self.fixed_slots(item, &mut rng, swaps, &mut existing);
         rng.draw(); // discarded draw (legendary)
-        self.picks(item_idx, &mut rng, swaps, false, 0, &mut existing);
+        let lead = if weapon_primal { unresolved } else { 0 };
+        self.picks(item_idx, &mut rng, swaps, false, lead, &mut existing);
+        self.ban_sockets = false;
         Reforged { affixes: existing, child_seed: rng.lo(), ancient, primal }
     }
 

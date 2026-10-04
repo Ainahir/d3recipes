@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=5d2c9f81b4";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=7875fa43b4";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -66,8 +66,9 @@ export function stopOn(cp, prev) {
 
 // The affix the Mystic replaces: a spare one the item rolled, primary first, so the step reads like the community recipes.
 export function mysticSpare(h, wantStems) {
-  const spare = h.lines.filter((l) => l.stem !== "item power" && l.stem !== "Sockets" && l.stem !== "Indestructible" && !wantStems.has(l.stem));
-  return spare.find((l) => !isSecondary(l.stem)) || spare[0];
+  // Never the weapon-damage range (it cannot be rerolled sensibly); the main stat only as a last resort.
+  const spare = h.lines.filter((l) => l.stem !== "item power" && l.stem !== "Sockets" && l.stem !== "Indestructible" && !RANGE_STEMS.has(l.stem) && !wantStems.has(l.stem));
+  return spare.find((l) => !MAIN.has(l.stem) && !isSecondary(l.stem)) || spare.find((l) => !MAIN.has(l.stem)) || spare[0];
 }
 
 export function stepsHtml(h, missing, wantStems) {
