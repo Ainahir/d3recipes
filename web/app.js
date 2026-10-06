@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=7875fa43b4";
-import { slotPlural, matsHtml, stepsHtml, mysticSpare, tooltipRows } from "./recipe.js?v=7875fa43b4";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=f7f0c3826d";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows } from "./recipe.js?v=f7f0c3826d";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -326,8 +326,7 @@ function hitHtml(h, tier, snap) {
   const perfect = !missing.length;
   const [tagText, tagCls] = TAGS[tier][perfect ? "best" : "part"];
   // Headline: the requested stats the item rolls (highlighted), then any other PRIMARY stats it rolled; secondary stats only when
-  // requested. A recipe that finishes at the Mystic ends with what the Mystic does, in place of the stat it swaps out.
-  const spare = perfect ? null : mysticSpare(h, wantStems);
+  // requested. A recipe that finishes at the Mystic ends with the stat the Mystic is to roll.
   const seen = new Set();
   const parts = [];
   for (const s of snap) {
@@ -336,12 +335,12 @@ function hitHtml(h, tier, snap) {
   const onWeapon = WEAPON_SLOTS.has(run.item.slot);
   for (const l of h.lines) {
     if (l.stem === "item power" || seen.has(l.stem) || isSecondary(l.stem) || l.stem === "Sockets" || l.stem === "Indestructible") continue;
-    if (wantStems.has(l.stem) || (spare && l.stem === spare.stem)) continue;
+    if (wantStems.has(l.stem)) continue;
     if (onWeapon && RANGE_STEMS.has(l.stem)) continue;   // every weapon rolls its damage; it is a given, so it stays in the full tooltip
     seen.add(l.stem);
     parts.push(`<span class="extra">${statAbbr(l.stem)}</span>`);
   }
-  if (!perfect) parts.push(`<span class="want">then Mystic: ${spare ? `${statAbbr(spare.stem)} &rarr; ` : ""}${missing.map((m) => statAbbr(m)).join(" or ")}</span>`);
+  if (!perfect) parts.push(`<span class="want">then Mystic: ${missing.map((m) => statAbbr(m)).join(" or ")}</span>`);
   const lines = tooltipRows(h.lines).map((r) => {
     const w = wantStems.has(r.stem);
     return `<span class="${w ? "want" : ""}">${r.label}</span><span class="v ${w ? "want" : ""}">${r.value}</span>`;
@@ -355,12 +354,14 @@ function hitHtml(h, tier, snap) {
 
 // Per category: the cheapest recipes that land every wanted stat, plus one "finish at the Mystic" recipe when it beats
 // them (or when nothing lands every stat) — a rated best-effort instead of an empty answer.
-function pickHits(key, r, wantN, show) {
+function pickHits(key, r, snap, show) {
   const perfect = r.full.slice(0, show);
   let partial = [];
-  if (wantN >= 2) {
+  if (snap.length >= 2) {
     const best = perfect.length ? perfect[0].cost : Infinity;
-    partial = r.near.filter((h) => h.cost < best).slice(0, 1);
+    const wantStems = new Set(snap);
+    // only recipes whose item has a line the Mystic can swap out
+    partial = r.near.filter((h) => h.cost < best && mysticCanFinish(h, snap.filter((_, i) => !h.matched.includes(i)), wantStems)).slice(0, 1);
   }
   return [...perfect, ...partial];
 }
@@ -377,7 +378,7 @@ function render(final) {
   for (const t of TIERS) {
     const r = run.results[t.key];
     if (!r) continue;
-    for (const h of pickHits(t.key, r, snap.length, run.show)) {
+    for (const h of pickHits(t.key, r, snap, run.show)) {
       if (shown.some((s) => s.matched >= h.matched.length && s.cost <= h.cost)) continue;
       shown.push({ matched: h.matched.length, cost: h.cost });
       body += hitHtml(h, TIER_OF[t.key], snap);

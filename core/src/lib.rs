@@ -84,7 +84,9 @@ impl Engine {
                 }
                 for ai in sim.candidate_affixes(item) {
                     let a = &d.affixes[ai];
-                    if !a.specs.is_empty() && !a.stem.is_empty() {
+                    // a socket has no roll (no formulas) but is a real target; weapons never roll one
+                    let socket = a.socket && !d.items[item].weapon;
+                    if (!a.specs.is_empty() || socket) && !a.stem.is_empty() {
                         seen.entry(a.stem.clone()).or_insert_with(|| a.label.clone());
                     }
                 }

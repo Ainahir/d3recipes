@@ -178,6 +178,10 @@ pub fn stem_of(label: &str) -> String {
         }
         out.push(t);
     }
+    // every socket affix ("Sockets Helm V", "Sockets XI", ...) is one family
+    if out.first() == Some(&"Sockets") {
+        return "Sockets".to_string();
+    }
     out.join(" ")
 }
 
