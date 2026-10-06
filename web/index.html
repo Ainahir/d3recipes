@@ -279,10 +279,10 @@
       </details>
       <details style="margin-top:10px">
         <summary>Switch heroes</summary>
-        <p class="small" style="margin:10px 0 0">Let heroes of other classes do some of the cube steps. The item keeps its seed when you hand it over; the hero's class changes what it rolls. The item is always created by the class chosen above.</p>
-        <div id="heroes" class="opts"></div>
+        <p class="small" style="margin:10px 0 0">Hand the item to a hero of another class (a throwaway level 1 will do) for some of the cube steps. The item keeps its seed; the hero's class changes what it rolls. The item is always created by the class chosen above, and the Mystic may be any class. More swaps can find cheaper recipes but make the search much slower.</p>
         <div class="opts">
-          <div><label for="cs" title="Relative cost of handing the item to a hero of another class, in the same units as the costs above. Higher means fewer switches.">Switch hero</label><input id="cs" type="number" min="0" step="any" value="1"></div>
+          <div><label for="xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Hero swaps</label><input id="xn" type="number" min="0" step="1" value="0" placeholder="no limit"></div>
+          <div><label for="cs" title="Relative cost of handing the item to a hero of another class, in the same units as the costs above. Higher means fewer swaps.">Swap cost</label><input id="cs" type="number" min="0" step="any" value="1"></div>
         </div>
       </details>
     </section>

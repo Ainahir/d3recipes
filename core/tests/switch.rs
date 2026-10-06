@@ -114,3 +114,28 @@ fn another_class_rolls_the_same_seed_into_other_lines() {
         .count();
     assert!(differ > 50, "{differ} of 100");
 }
+
+/// `max_switch` caps the hand-overs of one route: the played belt route needs six, so with five or fewer it is out of reach (a
+/// dearer route at best), and with six it is found again. No route ever has more hand-overs than allowed.
+#[test]
+fn max_switch_limits_the_hand_overs() {
+    let run = |max: u32| {
+        let q: Query = serde_json::from_value(serde_json::json!({
+            "class": 5, "slots": ["Belt"], "items": [3768352170u32], "season": 40, "quality": "primal", "max_primalize": 2, "maxsteps": 1000,
+            "cost_h": 100, "cost_r": 500, "cost_p": 2500, "cost_c": 75, "cost_switch": 100, "cost_limit": 6800, "top": 1,
+            "wants": [{"fam": ["Str"]}, {"fam": ["Vit"]}, {"fam": ["ResistAll"]}], "min_match": 3, "switch": [1], "max_switch": max
+        }))
+        .unwrap();
+        run_query(data(), q, 10_000).full.first().map(|h| (h.cost, h.route_class.iter().zip(h.route_class.iter().skip(1)).filter(|(a, b)| a != b).count()))
+    };
+    for max in 0..=6 {
+        let got = run(max);
+        println!("max_switch {max}: {got:?}");
+        if let Some((_, swaps)) = got {
+            assert!(swaps as u32 <= max, "{swaps} hand-overs with max_switch {max}");
+        }
+    }
+    assert_eq!(run(6).map(|h| h.0), Some(6800));
+    // five allowed: only a dearer route (7,200, five hand-overs) is left
+    assert!(run(5).map_or(true, |h| h.0 > 6800));
+}

@@ -157,8 +157,6 @@ function start() {
   $("app").hidden = false;
   $("cls").innerHTML = info.classes.map((c, i) => `<option value="${i}">${className(c)}</option>`).join("");
   $("cls").addEventListener("change", loadStems);
-  $("heroes").innerHTML = info.classes.map((c, i) => `<label class="small"><input type="checkbox" data-c="${i}"> ${className(c)}</label>`).join("");
-  $("heroes").addEventListener("change", loadStems);
   itemList = info.items;
   combo($("itemFind"), $("itemPick"), itemSource, "No matching item", pickItem);
   combo($("find"), $("pick"), statSource, "No matching stat on this item", (stem) => { wants.push({ stem, min: "" }); renderChips(); });
@@ -217,9 +215,9 @@ async function loadStems() {
   const ci = +$("cls").value;
   const all = new Map();
   if (pickedItem) {
-    // what the item can roll for its own class and for every hero allowed under Switch heroes (one of them may roll or
-    // enchant a stat the item's class never gets, e.g. Lightning damage on a Necromancer's amulet)
-    const classes = [ci, ...[...$("heroes").querySelectorAll("input:checked")].map((el) => +el.dataset.c).filter((c) => c !== ci)];
+    // what the item can roll for its own class and for every other class (one of them may roll or enchant a stat the item's
+    // class never gets, e.g. Lightning damage on a Necromancer's amulet, enchanted by a Wizard)
+    const classes = [ci, ...[0, 1, 2, 3, 4, 5, 6].filter((c) => c !== ci)];
     for (const c of classes) {
       const st = await stemsFor(c, pickedItem.slot, pickedItem.id);
       for (const k of Object.keys(st)) if (!HIDDEN.test(k)) all.set(k, statName(k));
@@ -256,8 +254,8 @@ function readRequest() {
   return {
     c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, String(w.min)]),
     p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
-    // heroes of other classes allowed to do cube steps, and the cost of each hand-over (the item's own class never counts)
-    x: [...$("heroes").querySelectorAll("input:checked")].map((el) => +el.dataset.c).filter((c) => c !== +$("cls").value),
+    // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
+    xn: $("xn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("xn").value || 0))),
     xs: String(Math.max(0, +$("cs").value || 0)),   // an empty cost searches as 0, so the link says 0
   };
 }
@@ -271,7 +269,9 @@ function baseQuery(req, item, season, hc) {
   // search the most) until it gets a control of its own. set_roots: a set item's recipe may start from any piece of its set.
   return {
     class: req.c, slots: [item.slot], items: [item.id], season, hardcore: hc,
-    switch: req.x || [], cost_switch: (req.x || []).length ? Math.max(0, Math.round((+req.xs || 0) * 100)) : 0,
+    // every class may take the item (`max_switch` hand-overs during the cube steps, any class at the Mystic)
+    switch: [0, 1, 2, 3, 4, 5, 6].filter((c) => c !== req.c), max_switch: req.xn === "" ? 255 : Math.min(254, +req.xn || 0),
+    cost_switch: Math.max(0, Math.round((+req.xs || 0) * 100)),
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: 2, set_roots: true,
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
@@ -406,7 +406,7 @@ async function applyLink(parsed) {
   pickedItem = it;
   renderItemChips();
   ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
-  $("heroes").querySelectorAll("input").forEach((el) => { el.checked = (req.x || []).includes(+el.dataset.c); });
+  $("xn").value = req.xn;
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);

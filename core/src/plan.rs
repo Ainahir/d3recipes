@@ -65,6 +65,9 @@ fn d_one() -> u64 {
 fn d_pcost() -> u64 {
     25
 }
+fn d_unlimited() -> u32 {
+    255
+}
 fn d_top() -> usize {
     8
 }
@@ -146,6 +149,11 @@ pub struct Query {
     /// cost of handing the item to a hero of another class (0 = free); a small one keeps routes from switching for nothing
     #[serde(default)]
     pub cost_switch: u64,
+    /// most hand-overs to another class during the cube steps of one route (255 or more = unlimited, the default). Each one widens
+    /// the search on class items (another hero's Reforge costs an extra draw, a new branch). A hand-over for the Mystic is not
+    /// counted: it changes no cube step, only who enchants, and costs `cost_switch`.
+    #[serde(default = "d_unlimited")]
+    pub max_switch: u32,
     #[serde(default = "d_top")]
     pub top: usize,
     /// stop when the next node would cost more than this (0 = unlimited)
@@ -241,6 +249,7 @@ struct NodeRec {
     q: Q,
     pc: u8,
     cc: u8, // Convert steps used so far
+    sw: u8, // hand-overs to another class so far
     depth: u16,
     parent: u32,
     op: u8, // b'H' root, b'R', b'P', b'C' (Convert)
@@ -280,7 +289,7 @@ pub struct Search {
     min_match: usize,
     nodes: Vec<NodeRec>,
     heap: BinaryHeap<Reverse<(u64, u64, u32)>>,
-    seen: HashSet<(u32, u32, u8, u8)>,
+    seen: HashSet<(u32, u32, u8, u8, u8)>,
     seq: u64,
     full: Vec<(u64, Hit)>,
     near: Vec<(u64, Hit)>,
@@ -424,14 +433,14 @@ impl Search {
             let q = if r.primal { Q::Primal } else if r.ancient { Q::Ancient } else { Q::Normal };
             let cost = (r.n - self.q.n0) as u64 * self.q.cost_h;
             let idx = self.nodes.len() as u32;
-            self.nodes.push(NodeRec { item: r.item as u32, seed: r.seed, q, pc: 0, cc: 0, depth: 0, parent: u32::MAX, op: b'H', cls: self.q.class as u8, slot: name_idx, n: r.n as u16 });
+            self.nodes.push(NodeRec { item: r.item as u32, seed: r.seed, q, pc: 0, cc: 0, sw: 0, depth: 0, parent: u32::MAX, op: b'H', cls: self.q.class as u8, slot: name_idx, n: r.n as u16 });
             self.root_x0.insert(idx, r.x0);
             if self.need_lines(q) {
                 let aff = self.sim.drop_item(r.item, r.x0, r.ancient || r.primal, r.primal);
                 let lines = if r.primal { self.sim.values_max(r.item, &aff) } else { self.sim.values(r.item, r.seed, &aff) };
                 self.register(idx, cost, q, r.item, &aff, lines);
             }
-            if self.seen.insert((r.item as u32, r.seed, 0, 0)) {
+            if self.seen.insert((r.item as u32, r.seed, 0, 0, 0)) {
                 self.push(cost, idx);
             }
         }
@@ -439,8 +448,9 @@ impl Search {
 
     /// Duplicate check: a count with no real limit (255 or more) is not part of the state, so an item reached again by another
     /// route is not searched twice (the first time is the cheapest: the search is cost-ordered).
-    fn key(&self, item: u32, seed: u32, pc: u8, cc: u8) -> (u32, u32, u8, u8) {
-        (item, seed, if self.q.max_primalize >= 255 { 0 } else { pc }, if self.q.max_convert >= 255 { 0 } else { cc })
+    fn key(&self, item: u32, seed: u32, pc: u8, cc: u8, sw: u8) -> (u32, u32, u8, u8, u8) {
+        let lim = |n: u32, v: u8| if n >= 255 { 0 } else { v };
+        (item, seed, lim(self.q.max_primalize, pc), lim(self.q.max_convert, cc), lim(self.q.max_switch, sw))
     }
 
     fn push(&mut self, cost: u64, idx: u32) {
@@ -656,9 +666,9 @@ impl Search {
     }
 
     fn expand(&mut self, idx: u32, cost: u64) {
-        let (item, seed, pc, cc, depth, q) = {
+        let (item, seed, pc, cc, depth, q, sw) = {
             let n = &self.nodes[idx as usize];
-            (n.item as usize, n.seed, n.pc, n.cc, n.depth, n.q)
+            (n.item as usize, n.seed, n.pc, n.cc, n.depth, n.q, n.sw)
         };
         let _ = q;
         if depth as u32 >= self.q.maxsteps {
@@ -673,7 +683,12 @@ impl Search {
         // whoever transmutes it, and a hero of another class only adds one draw to a Reforge; an item of no class rolls
         // with the hero's weights.
         let icls = self.d.items[item].icls;
-        let order: Vec<usize> = std::iter::once(cur).chain(self.heroes.iter().copied().filter(|&c| c != cur)).collect();
+        // no hand-overs left (`max_switch`): the hero holding the item does the next step
+        let order: Vec<usize> = if (sw as u32) < self.q.max_switch {
+            std::iter::once(cur).chain(self.heroes.iter().copied().filter(|&c| c != cur)).collect()
+        } else {
+            vec![cur]
+        };
         let distinct = |key: &dyn Fn(usize) -> (usize, bool)| -> Vec<usize> {
             let mut keys = Vec::new();
             order.iter().copied().filter(|&c| !keys.contains(&key(c)) && { keys.push(key(c)); true }).collect()
@@ -684,6 +699,7 @@ impl Search {
         let improvers = distinct(&|c| (icls.unwrap_or(twin[c]), false));
         let cs = self.q.cost_switch;
         let hand = move |c: usize| if c == cur { 0 } else { cs };
+        let swn = move |c: usize| if c == cur { sw } else { sw.saturating_add(1) };
         // A state another hero reached first is expanded once (the same item and seed have the same future), but a later hero's
         // roll still registers its tooltip: on an item of no class every class reaches the same seed (the class changes which
         // affixes are picked, not how many draws they take) with different lines.
@@ -693,10 +709,10 @@ impl Search {
             let g = self.sim.reforge(item, seed);
             let cq = if g.primal { Q::Primal } else if g.ancient { Q::Ancient } else { Q::Normal };
             let ccost = cost + self.q.cost_r.max(1) + hand(c);
-            let new = self.seen.insert(self.key(item as u32, g.child_seed, pc, cc));
+            let new = self.seen.insert(self.key(item as u32, g.child_seed, pc, cc, swn(c)));
             if new || (k > 0 && self.need_lines(cq)) {
                 let cidx = self.nodes.len() as u32;
-                self.nodes.push(NodeRec { item: item as u32, seed: g.child_seed, q: cq, pc, cc, depth: depth + 1, parent: idx, op: b'R', cls: c as u8, slot, n: n0 });
+                self.nodes.push(NodeRec { item: item as u32, seed: g.child_seed, q: cq, pc, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'R', cls: c as u8, slot, n: n0 });
                 if self.need_lines(cq) {
                     let raw = if g.primal { self.sim.values_max(item, &g.affixes) } else { self.sim.values(item, g.child_seed, &g.affixes) };
                     self.register(cidx, ccost, cq, item, &g.affixes, raw);
@@ -712,10 +728,10 @@ impl Search {
                 self.sim.hero = c;
                 let (aff, child) = self.sim.primalize(item, seed);
                 let pcost = cost + self.q.cost_p.max(1) + hand(c);
-                let new = self.seen.insert(self.key(item as u32, child, pc + 1, cc));
+                let new = self.seen.insert(self.key(item as u32, child, pc + 1, cc, swn(c)));
                 if new || (k > 0 && self.need_lines(Q::Crafted)) {
                     let cidx = self.nodes.len() as u32;
-                    self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc: pc + 1, cc, depth: depth + 1, parent: idx, op: b'P', cls: c as u8, slot, n: n0 });
+                    self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc: pc + 1, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'P', cls: c as u8, slot, n: n0 });
                     if self.need_lines(Q::Crafted) {
                         let raw = self.sim.values_max(item, &aff);
                         self.register(cidx, pcost, Q::Crafted, item, &aff, raw);
@@ -733,10 +749,10 @@ impl Search {
                 self.sim.hero = c;
                 let g = self.sim.convert(item, seed);
                 let vcost = cost + self.q.cost_c.max(1) + hand(c);
-                let new = self.seen.insert(self.key(g.target as u32, g.child_seed, pc, cc + 1));
+                let new = self.seen.insert(self.key(g.target as u32, g.child_seed, pc, cc + 1, swn(c)));
                 if new || (k > 0 && self.need_lines(Q::Normal)) {
                     let cidx = self.nodes.len() as u32;
-                    self.nodes.push(NodeRec { item: g.target as u32, seed: g.child_seed, q: Q::Normal, pc, cc: cc + 1, depth: depth + 1, parent: idx, op: b'C', cls: c as u8, slot, n: n0 });
+                    self.nodes.push(NodeRec { item: g.target as u32, seed: g.child_seed, q: Q::Normal, pc, cc: cc + 1, sw: swn(c), depth: depth + 1, parent: idx, op: b'C', cls: c as u8, slot, n: n0 });
                     if self.need_lines(Q::Normal) {
                         let raw = self.sim.values(g.target, g.child_seed, &g.affixes);
                         self.register(cidx, vcost, Q::Normal, g.target, &g.affixes, raw);
