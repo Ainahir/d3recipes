@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=2f79dcff7f";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove } from "./recipe.js?v=2f79dcff7f";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1fc672fd23";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=1fc672fd23";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -257,6 +257,8 @@ function readRequest() {
     // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
     xn: $("xn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("xn").value || 0))),
     xs: String(Math.max(0, +$("cs").value || 0)),   // an empty cost searches as 0, so the link says 0
+    // most Convert Set Item steps per recipe ("" = no limit)
+    cn: $("cn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("cn").value || 0))),
   };
 }
 const contextNow = () => ({ season: Math.max(1, Math.round(+$("season").value || 40)), hc: $("hc").value === "1" });
@@ -272,7 +274,7 @@ function baseQuery(req, item, season, hc) {
     // every class may take the item (`max_switch` hand-overs during the cube steps, any class at the Mystic)
     switch: [0, 1, 2, 3, 4, 5, 6].filter((c) => c !== req.c), max_switch: req.xn === "" ? 255 : Math.min(254, +req.xn || 0),
     cost_switch: Math.max(0, Math.round((+req.xs || 0) * 100)),
-    eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: 2, set_roots: true,
+    eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
       const min = m === "" ? null : (isPct(stem) ? +m / 100 : +m);
@@ -407,6 +409,7 @@ async function applyLink(parsed) {
   renderItemChips();
   ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
   $("xn").value = req.xn;
+  $("cn").value = req.cn ?? DEFAULT_CONVERTS;
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);
