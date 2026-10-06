@@ -66,6 +66,12 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 ## Changelog
 
+**2026-10-05**
+
+- Custom search can now ask for a Socket (any item that can roll one; weapons never do). Thanks to the guys on the Diablo Seasonal Database Discord for the suggestion.
+- The Mystic step now just says which stat to roll, and a "finish at Mystic" result is offered only when the item has a spare line of the same kind (primary or secondary) to swap out. The weapon damage range never counts.
+- The prepared builds are hidden when the selected season has none (only season 40 has them); custom search works for any season.
+
 **2026-10-04**
 
 - Fixed natural primal weapons: they never roll a socket, and a socket slot left open is replaced by an extra primary affix. The last Reforge of a weapon route now gives the affixes the game gives.
