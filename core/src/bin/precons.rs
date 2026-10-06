@@ -11,7 +11,9 @@
 //! in the row's priorities, or not listed at all (never the weapon damage range). When no recipe allows that within `--mystic-budget`
 //! nodes, the row ships without the Mystic step (`nomystic` names the stat that does not fit). Every limit is a setting; 255 for a
 //! count means unlimited. Prices are whole numbers (default 100, 500, 75, 2500 = the page's 1 : 5 : 0.75 : 25 in hundredths).
-//! `--carry` copies the staples and salvage sections from an existing file (not generated here yet).
+//! `--staples DEF.json` generates the staples (class-agnostic items, each on the cheapest class: a natural primal, or an ancient or better
+//! for `want = "ancient"`, never Improve Legendary since it costs ashes) from their resolved definitions; `--salvage` generates the
+//! cheapest natural primal per slot (any item, any class, no Improve Legendary). `--carry` copies whichever of the two is not generated.
 use d3cube::data::Data;
 use d3cube::plan::{Checkpoint, Hit, Query};
 use d3cube::run_query;
@@ -43,6 +45,8 @@ struct Opts {
     mystic_check: bool,
     /// nodes for the search that keeps the Mystic step possible, before the row falls back to no Mystic step
     mystic_budget: usize,
+    staples: Option<String>,
+    salvage: bool,
 }
 
 fn opts() -> Opts {
@@ -59,6 +63,8 @@ fn opts() -> Opts {
         threads: std::thread::available_parallelism().map_or(4, |n| n.get()),
         mystic_check: true,
         mystic_budget: 8_000_000,
+        staples: None,
+        salvage: false,
     };
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -67,6 +73,11 @@ fn opts() -> Opts {
         match args[i].as_str() {
             "--hc" => {
                 o.hc = true;
+                i += 1;
+                continue;
+            }
+            "--salvage" => {
+                o.salvage = true;
                 i += 1;
                 continue;
             }
@@ -88,6 +99,7 @@ fn opts() -> Opts {
             "--max-improve" => o.max_improve = val().parse().unwrap(),
             "--threads" => o.threads = val().parse().unwrap(),
             "--mystic-budget" => o.mystic_budget = val().parse().unwrap(),
+            "--staples" => o.staples = Some(val()),
             a => panic!("unknown argument {a}"),
         }
         i += 2;
@@ -251,6 +263,57 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool) -
     o
 }
 
+/// Runs `f` over `jobs` on `threads` threads, each with its own copy of the data; results in job order.
+fn par<T: Sync, R: Send>(threads: usize, data_json: &str, jobs: &[T], f: impl Fn(&Rc<Data>, &T) -> R + Sync) -> Vec<R> {
+    let next = AtomicUsize::new(0);
+    let out: Mutex<Vec<(usize, R)>> = Mutex::new(Vec::new());
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| {
+                let d = Rc::new(Data::from_json(data_json).unwrap());
+                loop {
+                    let i = next.fetch_add(1, Ordering::SeqCst);
+                    if i >= jobs.len() {
+                        break;
+                    }
+                    let r = f(&d, &jobs[i]);
+                    out.lock().unwrap().push((i, r));
+                }
+            });
+        }
+    });
+    let mut v = out.into_inner().unwrap();
+    v.sort_by_key(|x| x.0);
+    v.into_iter().map(|x| x.1).collect()
+}
+
+/// One staple or salvage search: a natural primal (or ancient or better) with `required`, no Improve Legendary.
+fn simple_query(class: usize, slot: &str, items: &[u32], required: &[String], ancient: bool, o: &Opts) -> Query {
+    serde_json::from_value(json!({
+        "class": class, "slots": [slot], "items": items, "set_roots": true, "season": 40, "hardcore": o.hc, "eligible": true,
+        "maxsteps": 100000, "max_primalize": 0, "max_convert": o.max_convert, "node_cap": o.node_cap.min(3_000_000),
+        "cost_h": o.prices[0], "cost_r": o.prices[1], "cost_c": o.prices[2], "cost_p": o.prices[3],
+        "quality": if ancient { "ancient+" } else { "primal" }, "min_frac": if ancient { GOOD_ENOUGH } else { 0.0 }, "top": 1, "trail": true,
+        "wants": required.iter().map(|s| json!({"fam": [s]})).collect::<Vec<_>>(), "min_match": required.len()
+    }))
+    .unwrap()
+}
+
+/// A staple or salvage row in the page's format (no stop-offs).
+fn simple_row(slot: &str, item: &str, required: &[String], hit: &Hit) -> Value {
+    let row = json!({
+        "slot": slot, "item": item, "cubed_tag": false, "alternate": 0, "alternates_in_row": 1, "forced_stats": [], "mystic_stat": null,
+        "required_stats": required.iter().enumerate().map(|(i, s)| json!({"stem": s, "pos": i})).collect::<Vec<_>>()
+    });
+    let t = Task { class: 0, slot: slot.to_string(), items: vec![], required: required.to_vec(), min_match: required.len(), mystic: None, keep: vec![] };
+    let mut o = row_out(&row, Some(&t), Some(hit), false);
+    if let Some(m) = o.as_object_mut() {
+        m.remove("cheap");
+    }
+    o["item"] = json!(hit.name);
+    o
+}
+
 fn slug(title: &str) -> String {
     let mut s = String::new();
     for c in title.to_lowercase().chars() {
@@ -342,10 +405,55 @@ fn main() {
         }
         builds.push(json!({"id": slug(b["title"].as_str().unwrap()), "title": b["title"], "class": b["class"], "rows": out_rows}));
     }
-    let out = json!({
-        "season": 40, "hardcore": o.hc, "builds": builds,
-        "staples": carry.get("staples").cloned().unwrap_or(json!([])), "salvage": carry.get("salvage").cloned().unwrap_or(json!([]))
-    });
+    // staples: each definition on every class, the cheapest class wins (ties: class name)
+    let staples = match &o.staples {
+        None => carry.get("staples").cloned().unwrap_or(json!([])),
+        Some(p) => {
+            let defs: Value = serde_json::from_str(&std::fs::read_to_string(p).expect("--staples")).unwrap();
+            let defs: Vec<Value> = defs["staples"].as_array().unwrap().clone();
+            let jobs: Vec<(usize, usize)> = (0..defs.len()).flat_map(|k| (0..7).map(move |c| (k, c))).collect();
+            let hits = par(o.threads, &data_json, &jobs, |d, &(k, c)| {
+                let st = &defs[k];
+                let req = stems(&st["required_stats"]);
+                let q = simple_query(c, st["hero_slot"].as_str().unwrap(), &[hex(st["item_id"].as_str().unwrap())], &req, st["want"] == "ancient", &o);
+                run_query(d.clone(), q, 200_000).full.into_iter().next()
+            });
+            let mut out = Vec::new();
+            for (k, st) in defs.iter().enumerate() {
+                let req = stems(&st["required_stats"]);
+                let best = (0..7).filter_map(|c| hits[k * 7 + c].as_ref().map(|h| (h.cost, CLASSES[c], h))).min_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+                let tier = best.map(|(_, c, h)| json!({"class": c, "row": simple_row(st["hero_slot"].as_str().unwrap(), st["item"].as_str().unwrap(), &req, h)}));
+                eprintln!("  staple {}: {}", st["item"], best.map_or("NOT FOUND".to_string(), |(w, c, h)| format!("{c} cost {w} ({} steps)", h.steps)));
+                out.push(json!({"item": st["item"], "note": st["note"], "want": st["want"], "label": st["label"], "tier": tier}));
+            }
+            json!(out)
+        }
+    };
+    // salvage: per slot, the cheapest natural primal of any item on any class, cheapest slot first
+    let salvage = if !o.salvage {
+        carry.get("salvage").cloned().unwrap_or(json!([]))
+    } else {
+        let d0 = Data::from_json(&data_json).unwrap();
+        let slots: Vec<String> = d0.slots.iter().map(|s| s.name.clone()).collect();
+        let jobs: Vec<(usize, usize)> = (0..slots.len()).flat_map(|k| (0..7).map(move |c| (k, c))).collect();
+        let hits = par(o.threads, &data_json, &jobs, |d, &(k, c)| {
+            if d.slots[k].pools[c].is_empty() {
+                return None;
+            }
+            run_query(d.clone(), simple_query(c, &slots[k], &[], &[], false, &o), 200_000).full.into_iter().next()
+        });
+        let mut out: Vec<(u64, String, Value)> = Vec::new();
+        for (k, slot) in slots.iter().enumerate() {
+            let best = (0..7).filter_map(|c| hits[k * 7 + c].as_ref().map(|h| (h.cost, CLASSES[c], h))).min_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+            if let Some((w, c, h)) = best {
+                out.push((w, slot.clone(), json!({"slot": slot, "class": c, "row": simple_row(slot, &h.name, &[], h)})));
+            }
+        }
+        out.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
+        eprintln!("  salvage: {} slots", out.len());
+        json!(out.into_iter().map(|x| x.2).collect::<Vec<_>>())
+    };
+    let out = json!({"season": 40, "hardcore": o.hc, "builds": builds, "staples": staples, "salvage": salvage});
     std::fs::write(&o.out, serde_json::to_string(&out).unwrap()).expect("--out");
     let capped = results.values().filter(|r| r.2).count();
     let dropped = results.values().filter(|r| r.3).count();
