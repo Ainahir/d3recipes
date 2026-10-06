@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=6cdffe79bd";
-import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=6cdffe79bd";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=5e8c7aa104";
+import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=5e8c7aa104";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -80,7 +80,8 @@ function rowHtml(row, tooltip = true) {
   }
   const [qt, qc] = QUALITY[row.q] || QUALITY.normal;
   const stats = row.need.map((s) => `<span class="want">${esc(statAbbr(s))}</span>`).join(", ");
-  const mystic = row.mystic ? ` <span class="small">+ Mystic: ${esc(statName(row.mystic))}</span>` : "";
+  const mystic = row.mystic ? ` <span class="small">+ Mystic: ${esc(statName(row.mystic))}</span>`
+    : row.nomystic ? ` <span class="small">(no room for ${esc(statName(row.nomystic))} at the Mystic)</span>` : "";
   const craftedNote = row.q === "crafted" ? `<div class="small">Improve Legendary primals: only one can be worn per character.</div>` : "";
   const cheap = (row.cheap || []).map((c) => {
     const [t] = QUALITY[c.q] || QUALITY.normal;

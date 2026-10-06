@@ -1353,8 +1353,8 @@ items = [
 stat_priority = [
   "Cooldown Reduction",
   "Elite Damage",
-  "Strength",
   "Damage %",
+  "Strength",
 ]
 
 [[build.slot]]
@@ -1366,8 +1366,8 @@ items = [
 stat_priority = [
   "Cooldown Reduction",
   "Elite Damage",
-  "Strength",
   "Damage %",
+  "Strength",
 ]
 
 [[build.slot]]

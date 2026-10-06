@@ -280,7 +280,8 @@ impl Sim {
 
     /// Mystic: positions in `aff` whose line can be swapped for a stat of one of `fams` (stems, lower case) by the same rules a roll
     /// obeys: some affix of that stat that this item can roll must pass `excluded` and `fits` against the item's other lines.
-    pub fn mystic_swaps(&mut self, item_idx: usize, aff: &[usize], fams: &[String]) -> Vec<usize> {
+    /// `same_kind`: the new stat must also be the same kind (primary / secondary, from the data) as the line it replaces.
+    pub fn mystic_swaps(&mut self, item_idx: usize, aff: &[usize], fams: &[String], same_kind: bool) -> Vec<usize> {
         let targets: Vec<usize> =
             self.candidate_affixes(item_idx).into_iter().filter(|&t| fams.iter().any(|f| self.d.affixes[t].stem.to_lowercase() == *f)).collect();
         let mut out = Vec::new();
@@ -288,7 +289,8 @@ impl Sim {
         for pos in 0..aff.len() {
             rest.clear();
             rest.extend(aff.iter().enumerate().filter(|&(i, _)| i != pos).map(|(_, &a)| a));
-            if targets.iter().any(|&t| !self.excluded(t, &rest) && self.fits(&rest, t)) {
+            let kind = self.d.affixes[aff[pos]].kind;
+            if targets.iter().any(|&t| (!same_kind || self.d.affixes[t].kind == kind) && !self.excluded(t, &rest) && self.fits(&rest, t)) {
                 out.push(pos);
             }
         }

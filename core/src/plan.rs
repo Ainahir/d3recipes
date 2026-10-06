@@ -117,6 +117,21 @@ pub struct Query {
     /// slot those pieces come from, so a route can craft a cheap piece and Convert into the one asked for
     #[serde(default)]
     pub set_roots: bool,
+    /// nodes kept before the search gives up (0 = 3,000,000); bounds memory however long the caller lets it run
+    #[serde(default)]
+    pub node_cap: usize,
+    /// also return every step of each route (`Hit::trail`), not only the grouped checkpoints
+    #[serde(default)]
+    pub trail: bool,
+    /// a full result must leave the Mystic able to finish it: the stat in `mystic` (any of these stems) when the item lacks it, or the
+    /// one wanted stat it lacks when `min_match` allows one short, must legally replace a line of the same kind that is not wanted
+    #[serde(default)]
+    pub mystic_finish: bool,
+    #[serde(default)]
+    pub mystic: Vec<String>,
+    /// stems the Mystic must never replace, besides the wanted ones (e.g. stats the item always rolls)
+    #[serde(default)]
+    pub keep: Vec<String>,
     #[serde(default)]
     pub end_on_primalize: bool,
     /// stop at the first route that lands every wanted stat OR all but one (the Mystic finishes it): the search is cheapest-first, so
@@ -176,6 +191,9 @@ pub struct Hit {
     /// on a recipe one wanted stat short: the stems of the lines the Mystic may swap for that stat (the roll rules: affix groups,
     /// exclusion keys, budget); empty when none can
     pub mystic: Vec<String>,
+    /// every step of the route, root first (only with `Query::trail`)
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub trail: Vec<Checkpoint>,
     /// [root, after group 1, after group 2, ...] (filled in `results`, only for the routes actually returned)
     pub checkpoints: Vec<Checkpoint>,
     #[serde(skip)]
@@ -227,6 +245,9 @@ struct Chain {
     name_idx: u16,
     upto: u32,
 }
+
+/// Weapon damage lines: never worth rolling off at the Mystic (the page's RANGE_STEMS).
+const RANGE_STEMS: [&str; 8] = ["MinMaxDam", "ArcaneD", "ColdD", "FireD", "HolyD", "LightningD", "PoisonD", "PhysicalD"];
 
 /// Positions added to a chain at a time.
 const CHAIN_CHUNK: u32 = 32;
@@ -393,6 +414,12 @@ impl Search {
         }
     }
 
+    /// Duplicate check: a count with no real limit (255 or more) is not part of the state, so an item reached again by another
+    /// route is not searched twice (the first time is the cheapest: the search is cost-ordered).
+    fn key(&self, item: u32, seed: u32, pc: u8, cc: u8) -> (u32, u32, u8, u8) {
+        (item, seed, if self.q.max_primalize >= 255 { 0 } else { pc }, if self.q.max_convert >= 255 { 0 } else { cc })
+    }
+
     fn push(&mut self, cost: u64, idx: u32) {
         self.seq += 1;
         self.heap.push(Reverse((cost, self.seq, idx)));
@@ -436,6 +463,31 @@ impl Search {
             }
         }
         out
+    }
+
+    /// `Query::mystic_finish`: the stats a result still lacks (the Mystic stat, and a wanted stat when `min_match` allows one short) must
+    /// be at most one, and the Mystic must be able to add it: a line that is not wanted, not kept, not the weapon damage range and of the
+    /// same kind can legally be replaced by it.
+    fn mystic_can_finish(&mut self, item: usize, aff: &[usize], lines: &[LineOut], matched: &[usize]) -> bool {
+        let mut missing: Vec<Vec<String>> =
+            (0..self.wants_lc.len()).filter(|w| !matched.contains(w)).map(|w| self.wants_lc[w].1.clone()).collect();
+        let lc = |v: &[String]| v.iter().map(|s| s.to_lowercase()).collect::<Vec<_>>();
+        let mystic = lc(&self.q.mystic);
+        if !mystic.is_empty() && !lines.iter().any(|l| mystic.contains(&l.stem.to_lowercase())) {
+            missing.push(mystic);
+        }
+        match missing.len() {
+            0 => return true,
+            1 => {}
+            _ => return false,
+        }
+        let keep = lc(&self.q.keep);
+        let spare = |stem: &str| {
+            let s = stem.to_lowercase();
+            !self.wants_lc.iter().any(|w| w.1.contains(&s)) && !keep.contains(&s) && !RANGE_STEMS.iter().any(|r| r.to_lowercase() == s) && s != "indestructible"
+        };
+        let ok: Vec<bool> = aff.iter().map(|&a| spare(&self.d.affixes[a].stem)).collect();
+        self.sim.mystic_swaps(item, aff, &missing[0], true).into_iter().any(|p| ok[p])
     }
 
     fn matched(&self, lines: &[LineOut]) -> Vec<usize> {
@@ -489,7 +541,7 @@ impl Search {
         let matched = self.matched(&lines);
         let qual_ok = self.quality_ok(q);
         let nw = self.wants_lc.len();
-        let is_full = qual_ok && matched.len() >= self.min_match;
+        let is_full = qual_ok && matched.len() >= self.min_match && (!self.q.mystic_finish || self.mystic_can_finish(item, aff, &lines, &matched));
         let is_near = qual_ok && nw > 0 && matched.len() + 1 == self.min_match;
         let notable_min = self.min_match.saturating_sub(1).max(1);
         let is_notable = !is_full && !is_near && (q == Q::Primal || q == Q::Ancient) && nw > 0 && matched.len() >= notable_min;
@@ -500,7 +552,7 @@ impl Search {
         let mystic = match (is_near, (0..self.wants_lc.len()).find(|w| !matched.contains(w))) {
             (true, Some(w)) if !self.wants_lc[w].1.is_empty() => {
                 let fams = self.wants_lc[w].1.clone();
-                self.sim.mystic_swaps(item, aff, &fams).into_iter().map(|p| self.d.affixes[aff[p]].stem.clone()).collect()
+                self.sim.mystic_swaps(item, aff, &fams, false).into_iter().map(|p| self.d.affixes[aff[p]].stem.clone()).collect()
             }
             _ => Vec::new(),
         };
@@ -520,6 +572,7 @@ impl Search {
             matched,
             lines,
             mystic,
+            trail: Vec::new(),
             checkpoints: Vec::new(),
             idx,
         };
@@ -565,7 +618,7 @@ impl Search {
         let g = self.sim.reforge(item, seed);
         let cq = if g.primal { Q::Primal } else if g.ancient { Q::Ancient } else { Q::Normal };
         let ccost = cost + self.q.cost_r.max(1);
-        if self.seen.insert((item as u32, g.child_seed, pc, cc)) {
+        if self.seen.insert(self.key(item as u32, g.child_seed, pc, cc)) {
             let cidx = self.nodes.len() as u32;
             self.nodes.push(NodeRec { item: item as u32, seed: g.child_seed, q: cq, pc, cc, depth: depth + 1, parent: idx, op: b'R', slot, n: n0 });
             if self.need_lines(cq) {
@@ -578,7 +631,7 @@ impl Search {
         if (pc as u32) < self.q.max_primalize {
             let (aff, child) = self.sim.primalize(item, seed);
             let pcost = cost + self.q.cost_p.max(1);
-            if self.seen.insert((item as u32, child, pc + 1, cc)) {
+            if self.seen.insert(self.key(item as u32, child, pc + 1, cc)) {
                 let cidx = self.nodes.len() as u32;
                 self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc: pc + 1, cc, depth: depth + 1, parent: idx, op: b'P', slot, n: n0 });
                 if self.need_lines(Q::Crafted) {
@@ -592,7 +645,7 @@ impl Search {
         if (cc as u32) < self.q.max_convert && self.sim.set_pool(item).len() > 2 {
             let g = self.sim.convert(item, seed);
             let vcost = cost + self.q.cost_c.max(1);
-            if self.seen.insert((g.target as u32, g.child_seed, pc, cc + 1)) {
+            if self.seen.insert(self.key(g.target as u32, g.child_seed, pc, cc + 1)) {
                 let cidx = self.nodes.len() as u32;
                 self.nodes.push(NodeRec { item: g.target as u32, seed: g.child_seed, q: Q::Normal, pc, cc: cc + 1, depth: depth + 1, parent: idx, op: b'C', slot, n: n0 });
                 if self.need_lines(Q::Normal) {
@@ -612,7 +665,7 @@ impl Search {
         let mut left = max_nodes;
         loop {
             self.feed_chains();
-            if self.nodes.len() >= NODE_CAP {
+            if self.nodes.len() >= if self.q.node_cap == 0 { NODE_CAP } else { self.q.node_cap } {
                 self.done = true;
                 self.capped = true;
                 self.heap.clear();
@@ -639,8 +692,19 @@ impl Search {
         true
     }
 
-    /// The item's tooltip at the root and after each grouped route step (replays the route from its Hope of Cain root).
-    fn checkpoints(&mut self, idx: u32, route: &[(char, u32)]) -> Vec<Checkpoint> {
+    /// The item's tooltip at the root and after each grouped route step.
+    fn group(states: &[Checkpoint], route: &[(char, u32)]) -> Vec<Checkpoint> {
+        let mut out = vec![states[0].clone()];
+        let mut at = 0usize;
+        for &(_, n) in route {
+            at += n as usize;
+            out.push(states[at.min(states.len() - 1)].clone());
+        }
+        out
+    }
+
+    /// The item's tooltip at every step of the route to `idx`, root first (replays the route from its Hope of Cain root).
+    fn states(&mut self, idx: u32) -> Vec<Checkpoint> {
         let mut path = Vec::new();
         let mut i = idx;
         loop {
@@ -690,13 +754,7 @@ impl Search {
             let lines = self.make_lines(&aff, raw, mx);
             states.push(Checkpoint { name: self.d.items[item].name.clone(), quality: q.name().to_string(), lines });
         }
-        let mut out = vec![states[0].clone()];
-        let mut at = 0usize;
-        for &(_, n) in route {
-            at += n as usize;
-            out.push(states[at.min(states.len() - 1)].clone());
-        }
-        out
+        states
     }
 
     pub fn results(&mut self) -> Results {
@@ -710,7 +768,11 @@ impl Search {
         let mut near = pick(&self.near);
         let notable = pick(&self.notable);
         for h in full.iter_mut().chain(near.iter_mut()) {
-            h.checkpoints = self.checkpoints(h.idx, &h.route);
+            let states = self.states(h.idx);
+            h.checkpoints = Self::group(&states, &h.route);
+            if self.q.trail {
+                h.trail = states;
+            }
         }
         Results {
             status: Status { nodes: self.nodes.len() as u64, queue: self.heap.len(), cost_reached: self.cost_reached, done: self.done, capped: self.capped },
