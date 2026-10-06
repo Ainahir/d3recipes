@@ -1,6 +1,6 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-//! A primal item that can have sockets always has them all (weapons excepted). Played in the game (season 40 softcore, Barbarian): Squirt's Necklace from
+//! A primal ring or amulet that can have a socket always has it; other items (sources played) keep the ordinary roll. Played in the game (season 40 softcore, Barbarian): Squirt's Necklace from
 //! Hope of Cain #29, Reforge, Improve Legendary (crafted primal with a socket), Reforge (natural primal with a socket).
 use d3cube::data::Data;
 use d3cube::sim::{chain_roots, Sim};
@@ -58,4 +58,56 @@ fn primal_zodiac_has_no_socket() {
         let (aff, _) = sim.primalize(item, k.wrapping_mul(2_654_435_761));
         assert!(!aff.iter().any(|&a| d.affixes[a].socket));
     }
+}
+
+/// Replays a played route (Hope of Cain root, then R / P / C steps) and returns the final item's stems, sorted.
+fn played(class: usize, slot: &str, n: u32, hc: bool, path: &str) -> (String, Vec<String>) {
+    let d = data();
+    let s = d.slots.iter().find(|s| s.name == slot).unwrap();
+    let r = chain_roots(&s.pools[class], s.key, 40, hc, n, true, class, &d.items).into_iter().find(|r| r.n == n).unwrap();
+    let mut sim = Sim::new(d.clone(), class, true);
+    let (mut item, mut seed) = (r.item, r.seed);
+    let mut aff = sim.drop_item(item, r.x0, r.ancient || r.primal, r.primal);
+    for op in path.chars() {
+        match op {
+            'R' => {
+                let g = sim.reforge(item, seed);
+                (seed, aff) = (g.child_seed, g.affixes);
+            }
+            'P' => (aff, seed) = sim.primalize(item, seed),
+            _ => {
+                let g = sim.convert(item, seed);
+                (item, seed, aff) = (g.target, g.child_seed, g.affixes);
+            }
+        }
+    }
+    let mut stems: Vec<String> = aff.iter().map(|&a| d.affixes[a].stem.clone()).collect();
+    stems.sort();
+    (d.items[item].name.clone(), stems)
+}
+
+fn sorted(v: &[&str]) -> Vec<String> {
+    let mut v: Vec<String> = v.iter().map(|s| s.to_string()).collect();
+    v.sort();
+    v
+}
+
+/// Played (LEDGER V172): season 40 softcore Witch Doctor, Ring Hope #13 (Stone of Jordan), 10 Reforges = a primal ring WITH the socket.
+#[test]
+fn played_primal_ring_has_a_socket() {
+    let (name, stems) = played(3, "Ring", 13, false, "RRRRRRRRRR");
+    assert_eq!(name, "Stone of Jordan");
+    assert_eq!(stems, sorted(&["MaxMana", "Int", "DamageBonusCold", "Sockets", "Experience"]));
+}
+
+/// Played (LEDGER V170): primal SOURCES keep the ordinary roll, no forced socket. Season 40 hardcore Wizard: Source #1 (Etched Sigil)
+/// R R P R R R R R; Shoulders #3 (Firebird's Pinions) C R R R C C C C R C R into Firebird's Eye.
+#[test]
+fn played_primal_sources_have_no_socket() {
+    let (name, stems) = played(2, "Orb", 1, true, "RRPRRRRR");
+    assert_eq!(name, "Etched Sigil");
+    assert_eq!(stems, sorted(&["Int", "CriticalChance", "ArcanePowerOnCrit", "Skill_Wizard_ExplosiveBlast", "MaxArcanePower"]));
+    let (name, stems) = played(2, "Shoulders", 3, true, "CRRRCCCCRCR");
+    assert_eq!(name, "Firebird's Eye");
+    assert_eq!(stems, sorted(&["Int", "CriticalChance", "ArcanePowerOnCrit", "WeaponHitChill1h", "MaxArcanePower"]));
 }

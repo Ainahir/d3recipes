@@ -31,13 +31,13 @@ fn same(a: &[f64], b: &[f64]) -> bool {
     a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x == y || (x.is_nan() && y.is_nan()))
 }
 
-/// The one place the Rust port knowingly differs from the Python vectors: a primal item other than a weapon that can have
-/// sockets always has them, landed by its first primary pick (played in the game; see Sim::picks). The Python model left
+/// The one place the Rust port knowingly differs from the Python vectors: a primal ring or amulet that can have a socket
+/// always has it, landed by its first primary pick (played in the game; see Sim::picks). The Python model left
 /// many without, or rolled them on a later pick, so the picks after the first differ. Where such an item does not match,
 /// only the draws can still be compared: the child seed (and ancient/primal) must match, and the result must carry the
 /// socket. Every other case must match exactly.
 fn socket_rule(d: &Data, item: usize) -> bool {
-    !d.items[item].weapon && d.items[item].na > 0
+    d.items[item].jewelry && d.items[item].na > 0
 }
 
 fn has_socket(d: &Data, a: &[usize]) -> bool {

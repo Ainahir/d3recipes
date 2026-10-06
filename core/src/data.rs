@@ -115,6 +115,8 @@ pub struct Item {
     pub armor: bool,
     /// weapons never roll sockets on a primal
     pub weapon: bool,
+    /// a ring or an amulet (in the Ring or Amulet pool): a primal one gets a socket when it can have one (see `Sim::picks`)
+    pub jewelry: bool,
     pub icls: Option<usize>, // class index when the item is class-restricted
     /// Convert Set Item: set-id (0 = not a set item), global item_table.csv idx (one shared
     /// index space across every slot), and the per-class weight field (base_weight * class_weight[class]) used
@@ -242,6 +244,7 @@ impl Data {
                 sh: it.slot_type,
                 armor: it.armor,
                 weapon: it.weapon,
+                jewelry: false,
                 icls: if it.restricted_class >= 0 { Some(it.restricted_class as usize) } else { None },
                 setid: it.set_id,
                 idx: it.table_index,
@@ -268,7 +271,14 @@ impl Data {
                 }
                 Slot { name: s.name, key: s.key, pools, cross: s.cross }
             })
-            .collect();
+            .collect::<Vec<Slot>>();
+        for s in slots.iter().filter(|s| s.name == "Ring" || s.name == "Amulet") {
+            for pool in s.pools.iter() {
+                for &(i, _) in pool {
+                    items[i].jewelry = true;
+                }
+            }
+        }
         let mut set_members: HashMap<u32, Vec<usize>> = HashMap::new();
         for (i, it) in items.iter().enumerate() {
             if it.setid != 0 {
