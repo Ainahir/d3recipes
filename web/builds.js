@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=f7f0c3826d";
-import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=f7f0c3826d";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=81e356ef39";
+import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=81e356ef39";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -137,7 +137,14 @@ function salvageHtml(data) {
 
 // ---------- navigation ----------
 
+// the lists are rolled for one season; for any other season they would not match, so they are not offered
+const listed = (data) => (Math.max(1, Math.round(+$("season").value || 40))) === data.season;
+
 function navHtml(data) {
+  if (!listed(data)) {
+    return `<div class="grp"><button type="button" class="nb mode" data-route="search" aria-current="page">Custom search</button></div>` +
+      `<div class="grp"><span class="small">No prepared builds for season ${Math.max(1, Math.round(+$("season").value || 40))}. Custom search works for any season.</span></div>`;
+  }
   const groups = [];
   for (const b of data.builds) {
     let g = groups.find((x) => x.cls === b.class);
@@ -152,6 +159,7 @@ function navHtml(data) {
 }
 
 function show() {
+  if (current && !listed(current)) route = "search";   // a build link from another season: fall back to the search
   const isBuild = route !== "search";   // "staples" and every build id share the build view
   $("viewSearch").hidden = route !== "search";
   $("viewBuild").hidden = !isBuild;
