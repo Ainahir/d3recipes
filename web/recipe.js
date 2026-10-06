@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=eab8c345ab";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=cc3cc3346c";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -66,9 +66,12 @@ export function stopOn(cp, prev) {
 
 // Can the Mystic add every `missing` stat? It rerolls a line the player does not need, within the same kind: a primary
 // target needs a spare primary, a secondary target a spare secondary (the real reroll pools are finer than this, so the
-// check stays simple). The weapon-damage range is never counted: rolling off it is almost always a mistake.
+// check stays simple). The weapon-damage range is never counted: rolling off it is almost always a mistake. Only lines the
+// engine lists in `h.mystic` count: swapping them for the missing stat obeys the roll rules (no All Res next to a single
+// resistance, no Life per Hit next to Life per Kill, ...).
 export function mysticCanFinish(h, missing, wantStems) {
-  const spare = h.lines.filter((l) => l.stem !== "item power" && l.stem !== "Indestructible" && !RANGE_STEMS.has(l.stem) && !wantStems.has(l.stem));
+  const legal = new Set(h.mystic || []);
+  const spare = h.lines.filter((l) => l.stem !== "item power" && l.stem !== "Indestructible" && !RANGE_STEMS.has(l.stem) && !wantStems.has(l.stem) && legal.has(l.stem));
   const sec = spare.filter((l) => isSecondary(l.stem)).length;
   const need = { sec: missing.filter((m) => isSecondary(m)).length, pri: missing.filter((m) => !isSecondary(m)).length };
   return spare.length - sec >= need.pri && sec >= need.sec;

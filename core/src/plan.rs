@@ -169,6 +169,9 @@ pub struct Hit {
     /// indices of the wants that appear on the tooltip
     pub matched: Vec<usize>,
     pub lines: Vec<LineOut>,
+    /// on a recipe one wanted stat short: the stems of the lines the Mystic may swap for that stat (the roll rules: affix groups,
+    /// exclusion keys, budget); empty when none can
+    pub mystic: Vec<String>,
     /// [root, after group 1, after group 2, ...] (filled in `results`, only for the routes actually returned)
     pub checkpoints: Vec<Checkpoint>,
     #[serde(skip)]
@@ -465,6 +468,14 @@ impl Search {
         if !(is_full || is_near || is_notable) {
             return;
         }
+        // a recipe one stat short: which lines the Mystic may legally swap for the missing stat
+        let mystic = match (is_near, (0..self.wants_lc.len()).find(|w| !matched.contains(w))) {
+            (true, Some(w)) if !self.wants_lc[w].1.is_empty() => {
+                let fams = self.wants_lc[w].1.clone();
+                self.sim.mystic_swaps(item, aff, &fams).into_iter().map(|p| self.d.affixes[aff[p]].stem.clone()).collect()
+            }
+            _ => Vec::new(),
+        };
         let (route, slot, n, root_item) = self.route_of(idx);
         let node = &self.nodes[idx as usize];
         let hit = Hit {
@@ -480,6 +491,7 @@ impl Search {
             seed: node.seed,
             matched,
             lines,
+            mystic,
             checkpoints: Vec::new(),
             idx,
         };

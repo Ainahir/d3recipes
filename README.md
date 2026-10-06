@@ -69,6 +69,7 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 **2026-10-06**
 
 - Fixed custom search showing recipes for the wrong item: for a set item, a Convert Set Item step could end the route on another piece of the set (a search for a chest could return shoulders), and the recipe was listed as if it made the item asked for. Every recipe now ends on the item you searched for. Thanks to Stroold and Rwede on Discord for documenting the bug.
+- Fixed custom search suggesting Mystic rolls the item can't take. The Mystic now follows the same rules as the game's rolls: no All Resistance next to a single resistance, no Life per Hit next to Life per Kill, one skill-damage line, and so on. Thanks to szymonos for the detailed report. (The prepared builds still show a few such steps until they are regenerated.)
 
 **2026-10-05**
 

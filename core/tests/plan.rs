@@ -103,3 +103,36 @@ fn item_search_only_returns_the_item() {
         }
     }
 }
+
+/// The Mystic swaps a line under the same rules a roll obeys. Reported in issue #3: Crusader, Vigilante Belt, Str / Vit / All Res,
+/// season 40 softcore, page defaults: 38 belts + 3 Reforges lands Str, Vit, CDR, Justice and Lightning Resistance, and the page
+/// offered "Mystic: roll All Resistance". All Res shares an affix group with the single resistances, so swapping any other line
+/// leaves Lightning Res in the way, and Lightning Res itself is a secondary.
+#[test]
+fn mystic_respects_affix_conflicts() {
+    let d = data();
+    let id = 0xe09c7daau32; // Vigilante Belt
+    let q: Query = serde_json::from_value(serde_json::json!({
+        "class": 5, "slots": ["Belt"], "items": [id], "season": 40, "hardcore": false, "eligible": true,
+        "n0": 0, "maxpos": 4096, "maxsteps": 1000, "max_primalize": 10, "max_convert": 2,
+        "cost_h": 100, "cost_r": 500, "cost_p": 2500, "cost_c": 75, "top": 4, "min_frac": 0.0,
+        "wants": [{"fam": ["Str"]}, {"fam": ["Vit"]}, {"fam": ["ResistAll"]}], "min_match": 3, "end_on_near": true,
+        "quality": "primal", "end_on_primalize": false
+    }))
+    .unwrap();
+    let r = run_query(d, q, 10_000);
+    let mut seen = false;
+    for h in &r.near {
+        let stems: Vec<&str> = h.lines.iter().map(|l| l.stem.as_str()).collect();
+        println!("hope {} route {:?} lines {:?} mystic {:?}", h.hope, h.route, stems, h.mystic);
+        // with a single resistance on the item, only that line can become All Res (it is a secondary and All Res a primary,
+        // so the page's same-kind rule then rules the swap out)
+        if stems.iter().any(|s| s.ends_with("Resist") && *s != "ResistAll") {
+            assert!(h.mystic.iter().all(|s| s.ends_with("Resist")), "a single resistance blocks All Res, yet {:?} were offered", h.mystic);
+        }
+        if h.hope == 38 && h.route == vec![('R', 3)] {
+            seen = true;
+        }
+    }
+    assert!(seen, "the reported recipe (38 belts, 3 Reforges) was not among the near results");
+}
