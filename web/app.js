@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=cc3cc3346c";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove } from "./recipe.js?v=cc3cc3346c";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=6cdffe79bd";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove } from "./recipe.js?v=6cdffe79bd";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -254,9 +254,11 @@ function baseQuery(req, item, season, hc) {
   // The planner works in whole numbers; hundredths keep ratios like 0.75 exact.
   const cost = (v) => Math.max(1, Math.round((+v || 0) * 100));
   const [cc, ch, cr, cp] = req.p;
+  // Improve Legendary is limited by its price alone. Convert stays at 2 here (cheap and branching at every step, it widens the
+  // search the most) until it gets a control of its own. set_roots: a set item's recipe may start from any piece of its set.
   return {
     class: req.c, slots: [item.slot], items: [item.id], season, hardcore: hc,
-    eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 10, max_convert: 2,
+    eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: 2, set_roots: true,
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
       const min = m === "" ? null : (isPct(stem) ? +m / 100 : +m);

@@ -110,9 +110,13 @@ pub struct Query {
     /// how many of `wants` a result must show (0 = all of them)
     #[serde(default)]
     pub min_match: usize,
-    /// only roots of these item ids
+    /// only roots of these item ids; when given, a result must also END on one of them
     #[serde(default)]
     pub items: Vec<u32>,
+    /// with `items` and Convert allowed: also start from every other piece of their sets (sets of more than 2 pieces), in every
+    /// slot those pieces come from, so a route can craft a cheap piece and Convert into the one asked for
+    #[serde(default)]
+    pub set_roots: bool,
     #[serde(default)]
     pub end_on_primalize: bool,
     /// stop at the first route that lands every wanted stat OR all but one (the Mystic finishes it): the search is cheapest-first, so
@@ -245,6 +249,8 @@ pub struct Search {
     near: Vec<(u64, Hit)>,
     notable: Vec<(u64, Hit)>,
     slot_names: Vec<String>,
+    /// item ids a route may start from (empty = any): `q.items`, plus their set-mates with `q.set_roots`
+    root_items: Vec<u32>,
     chains: Vec<Chain>,
     root_x0: HashMap<u32, u64>,
     warnings: Vec<String>,
@@ -278,6 +284,7 @@ impl Search {
             near: Vec::new(),
             notable: Vec::new(),
             slot_names: Vec::new(),
+            root_items: Vec::new(),
             chains: Vec::new(),
             root_x0: HashMap::new(),
             warnings: Vec::new(),
@@ -292,7 +299,28 @@ impl Search {
 
     fn init_roots(&mut self) {
         let d = self.d.clone();
-        for name in self.q.slots.clone().iter() {
+        self.root_items = self.q.items.clone();
+        let mut slots = self.q.slots.clone();
+        if self.q.set_roots && self.q.max_convert > 0 {
+            for &id in self.q.items.iter() {
+                let Some(ii) = d.items.iter().position(|it| it.id == id) else { continue };
+                let mates = self.sim.set_pool(ii);
+                if mates.len() <= 2 {
+                    continue; // Convert Set Item needs a set of more than 2 pieces
+                }
+                for &m in mates.iter() {
+                    if !self.root_items.contains(&d.items[m].id) {
+                        self.root_items.push(d.items[m].id);
+                    }
+                }
+                for s in d.slots.iter() {
+                    if !slots.contains(&s.name) && s.pools[self.q.class].iter().any(|&(i, _)| mates.contains(&i)) {
+                        slots.push(s.name.clone());
+                    }
+                }
+            }
+        }
+        for name in slots.iter() {
             let si = match d.slots.iter().position(|s| &s.name == name) {
                 Some(i) => i,
                 None => {
@@ -346,7 +374,7 @@ impl Search {
                 continue;
             }
             let it = &d.items[r.item];
-            if !self.q.items.is_empty() && !self.q.items.contains(&it.id) {
+            if !self.root_items.is_empty() && !self.root_items.contains(&it.id) {
                 continue;
             }
             let q = if r.primal { Q::Primal } else if r.ancient { Q::Ancient } else { Q::Normal };

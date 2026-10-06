@@ -70,6 +70,8 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 - Fixed custom search showing recipes for the wrong item: for a set item, a Convert Set Item step could end the route on another piece of the set (a search for a chest could return shoulders), and the recipe was listed as if it made the item asked for. Every recipe now ends on the item you searched for. Thanks to Stroold and Rwede on Discord for documenting the bug.
 - Fixed custom search suggesting Mystic rolls the item can't take. The Mystic now follows the same rules as the game's rolls: no All Resistance next to a single resistance, no Life per Hit next to Life per Kill, one skill-damage line, and so on. Thanks to szymonos for the detailed report. (The prepared builds still show a few such steps until they are regenerated.)
+- Custom search finds cheaper recipes for set items: a recipe can now start from any piece of the set (for example, craft pants and Convert Set Item into the helm you want), as the prepared builds already did. On the set items in the prepared builds that use Convert, custom search now finds a cheaper recipe for 45 of 59 and the same for the rest.
+- Custom search no longer limits how many times Improve Legendary is used; its price already does.
 
 **2026-10-05**
 
