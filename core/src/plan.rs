@@ -449,7 +449,11 @@ impl Search {
         if q == Q::Crafted && !self.q.end_on_primalize {
             return;
         }
-        let mx = if matches!(q, Q::Primal | Q::Crafted) { None } else { Some(self.sim.values_max(item, aff)) };
+        // a search for given items only answers with those items: a Convert step can move the route onto a set-mate
+        if !self.q.items.is_empty() && !self.q.items.contains(&self.d.items[item].id) {
+            return;
+        }
+        let mx =if matches!(q, Q::Primal | Q::Crafted) { None } else { Some(self.sim.values_max(item, aff)) };
         let lines = self.make_lines(aff, raw, mx);
         let matched = self.matched(&lines);
         let qual_ok = self.quality_ok(q);

@@ -66,6 +66,10 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 ## Changelog
 
+**2026-10-06**
+
+- Fixed custom search showing recipes for the wrong item: for a set item, a Convert Set Item step could end the route on another piece of the set (a search for a chest could return shoulders), and the recipe was listed as if it made the item asked for. Every recipe now ends on the item you searched for. Thanks to Stroold and Rwede on Discord for documenting the bug.
+
 **2026-10-05**
 
 - Custom search can now ask for a Socket (any item that can roll one; weapons never do). Thanks to the guys on the Diablo Seasonal Database Discord for the suggestion.

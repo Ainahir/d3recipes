@@ -79,3 +79,27 @@ fn weighted_search_prefers_fewer_primalizes() {
         println!("cost_p {:>3}: cost {} steps {} hope {} route {:?}  near {} notable {}  ({} nodes, {:?})", p, h.cost, h.steps, h.hope, h.route, r.near.len(), r.notable.len(), r.status.nodes, t.elapsed());
     }
 }
+
+/// A search for one item must only return routes that end on that item. Reported live: Demon Hunter, The Shadow's Bane
+/// (chest), no stats, page defaults: a Convert step moved the route onto another Shadow's piece and the page showed that
+/// recipe for the chest. Query = the page's `baseQuery` for that request.
+#[test]
+fn item_search_only_returns_the_item() {
+    let d = data();
+    let bane = 0x0f807744u32;
+    for quality in ["primal", "crafted", "ancient", "normal"] {
+        let q: Query = serde_json::from_value(serde_json::json!({
+            "class": 0, "slots": ["Chest"], "items": [bane], "season": 40, "hardcore": false, "eligible": true,
+            "n0": 0, "maxpos": 4096, "maxsteps": 1000, "max_primalize": 10, "max_convert": 2,
+            "cost_h": 100, "cost_r": 500, "cost_p": 2500, "cost_c": 75, "top": 4, "min_frac": 0.0,
+            "wants": [], "min_match": 0, "end_on_near": false,
+            "quality": quality, "end_on_primalize": quality == "crafted"
+        }))
+        .unwrap();
+        let r = run_query(d.clone(), q, 10_000);
+        for h in r.full.iter().chain(r.near.iter()).chain(r.notable.iter()) {
+            println!("{quality}: cost {} route {:?} -> {} (root {})", h.cost, h.route, h.name, h.root_name);
+            assert_eq!(h.item, bane, "{quality}: route {:?} ends on {}, not The Shadow's Bane", h.route, h.name);
+        }
+    }
+}
