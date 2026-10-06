@@ -70,6 +70,8 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 - Custom search can now ask for a Socket (any item that can roll one; weapons never do). Thanks to the guys on the Diablo Seasonal Database Discord for the suggestion.
 - The Mystic step now just says which stat to roll, and a "finish at Mystic" result is offered only when the item has a spare line of the same kind (primary or secondary) to swap out. The weapon damage range never counts.
+- Custom search results now have a link: the address bar always holds your request with its season and mode (for example `s=40&m=sc`), so you can bookmark it or paste it in chat, and edit the season or mode in the address to see it for another one. **Copy link** copies it.
+- **Save** keeps a search in a Saved list under Custom search. **All saved** shows every saved search computed for the season and mode chosen at the top; change them and press Recompute to refresh the whole list. Saved searches stay in your browser only.
 - The prepared builds are hidden when the selected season has none (only season 40 has them); custom search works for any season.
 
 **2026-10-04**

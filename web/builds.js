@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=81e356ef39";
-import { stepsHtml, matsHtml, tooltipRows } from "./recipe.js?v=81e356ef39";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=ff31a3dc0e";
+import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=ff31a3dc0e";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -140,9 +140,18 @@ function salvageHtml(data) {
 // the lists are rolled for one season; for any other season they would not match, so they are not offered
 const listed = (data) => (Math.max(1, Math.round(+$("season").value || 40))) === data.season;
 
+// Saved requests sit right under Custom search. Each opens as a search link for the season and mode chosen now.
+function savedHtml() {
+  const saved = savedList();
+  if (!saved.length) return "";
+  const season = Math.max(1, Math.round(+$("season").value || 40)), hc = $("hc").value === "1";
+  return `<div class="grp"><span class="gl">Saved</span><button type="button" class="nb"${route === "saved" ? ' aria-current="page"' : ""} data-route="saved">All saved (${saved.length})</button>` +
+    saved.map((e) => `<button type="button" class="nb" data-link="${esc(requestHash(e.req, season, hc))}">${esc(e.label)}</button>`).join("") + `</div>`;
+}
+
 function navHtml(data) {
   if (!listed(data)) {
-    return `<div class="grp"><button type="button" class="nb mode" data-route="search" aria-current="page">Custom search</button></div>` +
+    return `<div class="grp"><button type="button" class="nb mode"${route === "search" ? ' aria-current="page"' : ""} data-route="search">Custom search</button></div>` + savedHtml() +
       `<div class="grp"><span class="small">No prepared builds for season ${Math.max(1, Math.round(+$("season").value || 40))}. Custom search works for any season.</span></div>`;
   }
   const groups = [];
@@ -152,16 +161,18 @@ function navHtml(data) {
     g.list.push(b);
   }
   const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${id}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
-  return `<div class="grp">${btn("search", "Custom search", "mode")}</div>` +
+  return `<div class="grp">${btn("search", "Custom search", "mode")}</div>` + savedHtml() +
     (data.staples && data.staples.length ? `<div class="grp"><span class="gl">Any class</span>${btn("staples", "Staples")}${data.salvage && data.salvage.length ? btn("salvage", "Cheap primals") : ""}</div>` : "") +
     `<div class="grp"><span class="gl top">Builds</span></div>` +
     groups.map((g) => `<div class="grp"><span class="gl">${esc(className(g.cls))}</span>${g.list.map((b) => btn(b.id, esc(b.title))).join("")}</div>`).join("");
 }
 
+let announced = "";
 function show() {
-  if (current && !listed(current)) route = "search";   // a build link from another season: fall back to the search
-  const isBuild = route !== "search";   // "staples" and every build id share the build view
+  if (current && !listed(current) && route !== "search" && route !== "saved") route = "search";   // a build link from another season: fall back to the search
+  const isBuild = route !== "search" && route !== "saved";   // "staples" and every build id share the build view
   $("viewSearch").hidden = route !== "search";
+  $("viewSaved").hidden = route !== "saved";
   $("viewBuild").hidden = !isBuild;
   if (current) {
     $("nav").innerHTML = navHtml(current);
@@ -176,6 +187,9 @@ function show() {
     // a card holding exactly one recipe opens from a click anywhere on it (see the click handler below)
     $("viewBuild").querySelectorAll("section.slot").forEach((c) => c.classList.toggle("single", c.querySelectorAll(":scope > details.rec").length === 1));
   }
+  // app.js loads the search (or the saved page) for the view; announce each change once, so redrawing the nav does not restart it
+  const key = route + "|" + location.hash;
+  if (key !== announced) { announced = key; window.dispatchEvent(new CustomEvent("d3-route", { detail: route })); }
 }
 
 function go(next, push = true) {
@@ -186,9 +200,10 @@ function go(next, push = true) {
 }
 
 function fromHash() {
-  const h = decodeURIComponent(location.hash.replace(/^#/, ""));
+  let h = "";
+  try { h = decodeURIComponent(location.hash.replace(/^#/, "").split("?")[0]); } catch (e) { /* malformed: start page */ }
   route = h || "search";
-  if (!["search", "staples", "salvage"].includes(route) && current && !current.builds.some((b) => b.id === route)) route = "search";
+  if (!["search", "staples", "salvage", "saved"].includes(route) && current && !current.builds.some((b) => b.id === route)) route = "search";
 }
 
 async function refresh() {
@@ -196,6 +211,8 @@ async function refresh() {
     current = await load(modeKey());
   } catch (e) {
     $("nav").innerHTML = `<span class="small">Could not load the prepared builds (${esc(e.message)}). Custom search still works.</span>`;
+    fromHash();
+    show();   // the search and saved views need no prepared data
     return;
   }
   fromHash();
@@ -219,9 +236,12 @@ $("viewBuild").addEventListener("click", (e) => {
 });
 $("home").addEventListener("click", (e) => { e.preventDefault(); go("search"); });
 $("nav").addEventListener("click", (e) => {
+  const l = e.target.closest("button[data-link]");
+  if (l) { location.hash = l.dataset.link.slice(1); window.scrollTo({ top: 0 }); return; }
   const b = e.target.closest("button[data-route]");
   if (b) go(b.dataset.route);
 });
+window.addEventListener("d3-saved", show);
 window.addEventListener("popstate", () => { fromHash(); show(); });
 $("hc").addEventListener("change", refresh);
 $("season").addEventListener("input", show);

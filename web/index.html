@@ -104,6 +104,12 @@
   details summary { cursor: pointer; color: var(--dim); }
   button.go { width: 100%; padding: 14px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 10px; cursor: pointer; }
   button.go:disabled { opacity: .5; cursor: default; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 12px; }
+  .actions[hidden] { display: none; }
+  button.btn { font: inherit; font-size: .9rem; color: var(--text); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  .saved .shead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .saved h3 { margin: 0; font-size: 1rem; }
+  .saved .shead a, .saved .shead .link { font-size: .85rem; }
   #status { color: var(--dim); font-size: .9rem; margin: 10px 2px; min-height: 1.3em; }
 
   /* results */
@@ -234,6 +240,7 @@
   <nav id="nav" aria-label="Prepared builds and custom search"></nav>
   <main id="content">
     <section id="viewBuild" hidden></section>
+    <section id="viewSaved" hidden></section>
     <section id="viewSearch">
   <div id="loading" class="card">Loading the item tables&hellip;</div>
 
@@ -273,6 +280,7 @@
 
     <button id="go" class="go">Find Recipes</button>
     <div id="status"></div>
+    <div id="actions" class="actions" hidden><button type="button" class="btn" id="copyLink">Copy link</button><button type="button" class="btn" id="saveBtn">Save</button><span id="actionNote" class="small"></span></div>
     <div id="out"></div>
   </div>
 
@@ -289,7 +297,7 @@
 
 </div>
 <script defer src="analytics.js"></script>
-<script type="module" src="builds.js?v=81e356ef39"></script>
-<script type="module" src="app.js?v=81e356ef39"></script>
+<script type="module" src="builds.js?v=ff31a3dc0e"></script>
+<script type="module" src="app.js?v=ff31a3dc0e"></script>
 </body>
 </html>

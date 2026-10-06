@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=81e356ef39";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows } from "./recipe.js?v=81e356ef39";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=ff31a3dc0e";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove } from "./recipe.js?v=ff31a3dc0e";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -161,8 +161,9 @@ function start() {
   combo($("itemFind"), $("itemPick"), itemSource, "No matching item", pickItem);
   combo($("find"), $("pick"), statSource, "No matching stat on this item", (stem) => { wants.push({ stem, min: "" }); renderChips(); });
   $("go").addEventListener("click", go);
+  initActions();
   renderItemChips();
-  loadStems();
+  loadStems().then(() => onRoute(routeOfHash()));
 }
 
 function itemSource() {
@@ -237,24 +238,34 @@ const TIERS = [
   { key: "normal", quality: "normal", crafted: false, label: "legendary" },
 ];
 
-let run = null;   // {base, budgetMs, deadline, i, results:{key: Results}, wantsSnap, item, timeUp}
+let run = null;   // the run in flight, or the last one: {base, deadline, i, results, wantsSnap, item, show, stopped, capped, warnings, finished, onUpdate, onDone, onCancel}
 
-function baseQuery() {
+// The request the form currently describes (see recipe.js for the shape).
+function readRequest() {
   const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
-  // The planner works in whole numbers; hundredths keep ratios like 0.75 exact.
-  const cost = (id) => Math.max(1, Math.round((+$(id).value || 0) * 100));
   return {
-    class: +$("cls").value, slots: [pickedItem.slot], items: [pickedItem.id], season: num("season") || 40, hardcore: $("hc").value === "1",
+    c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, String(w.min)]),
+    p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
+  };
+}
+const contextNow = () => ({ season: Math.max(1, Math.round(+$("season").value || 40)), hc: $("hc").value === "1" });
+
+function baseQuery(req, item, season, hc) {
+  // The planner works in whole numbers; hundredths keep ratios like 0.75 exact.
+  const cost = (v) => Math.max(1, Math.round((+v || 0) * 100));
+  const [cc, ch, cr, cp] = req.p;
+  return {
+    class: req.c, slots: [item.slot], items: [item.id], season, hardcore: hc,
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 10, max_convert: 2,
-    cost_h: cost("ch"), cost_r: cost("cr"), cost_p: cost("cp"), cost_c: cost("cc"), top: 4, min_frac: Math.min(1, num("floor") / 100),
-    wants: wants.map((w) => {
-      const min = w.min === "" ? null : (isPct(w.stem) ? +w.min / 100 : +w.min);
-      return { fam: [w.stem], min: min !== null && !Number.isNaN(min) ? min : null };
+    cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
+    wants: req.w.map(([stem, m]) => {
+      const min = m === "" ? null : (isPct(stem) ? +m / 100 : +m);
+      return { fam: [stem], min: min !== null && !Number.isNaN(min) ? min : null };
     }),
     // "all wanted stats" is the target; routes one stat short come back separately (finish them at the Mystic)
-    min_match: wants.length,
+    min_match: req.w.length,
     // the search is cheapest-first, so once a route lands every stat (or all but one, for the Mystic) nothing later is cheaper
-    end_on_near: wants.length >= 2,
+    end_on_near: req.w.length >= 2,
   };
 }
 
@@ -266,7 +277,7 @@ function startTier() {
   if (t.crafted && q.max_primalize < 1) { nextTier(); return; }
   searchId += 1;
   worker.postMessage({ type: "search", id: searchId, query: q, budgetMs: budget });
-  $("status").textContent = `Searching for ${t.label} recipes…`;
+  run.onUpdate(run, false, `Searching for ${t.label} recipes…`);
 }
 
 function nextTier() {
@@ -275,17 +286,14 @@ function nextTier() {
   startTier();
 }
 
-function go() {
-  if (!pickedItem) { $("status").textContent = "Search for an item you want first."; return; }
-  const base = baseQuery();
+// One search for one request. The worker runs one search at a time, so a new run replaces (and cancels) the one in flight.
+function startRun(req, item, season, hc, secs, onUpdate, onDone, onCancel) {
+  if (run && !run.finished) { run.finished = true; worker.postMessage({ type: "cancel" }); if (run.onCancel) run.onCancel(); }
   run = {
-    base,
-    deadline: performance.now() + Math.max(1, Math.round(+$("secs").value || 0)) * 1000,
-    i: 0, results: {}, wantsSnap: wants.map((w) => w.stem), item: pickedItem, show: Math.max(1, Math.round(+$("top").value || 1)),
-    stopped: false, capped: false, warnings: new Set(),
+    base: baseQuery(req, item, season, hc), deadline: performance.now() + Math.max(1, secs) * 1000,
+    i: 0, results: {}, wantsSnap: req.w.map((w) => w[0]), item, show: req.n,
+    stopped: false, capped: false, warnings: new Set(), finished: false, onUpdate, onDone, onCancel,
   };
-  $("out").innerHTML = "";
-  $("go").disabled = true;
   startTier();
 }
 
@@ -295,16 +303,158 @@ function onResults(r, final) {
   run.results[t.key] = r;
   if (final && !r.status.done) run.stopped = true;   // ran out of time in this category
   if (final && r.status.capped) run.capped = true;   // the planner's own search limit, not the clock
-  render(false);
+  run.onUpdate(run, false);
   if (final) nextTier();
 }
 
 function finish() {
-  $("go").disabled = false;
-  const any = TIERS.some((t) => (run.results[t.key] || { full: [], near: [] }).full.length || (run.results[t.key] || { near: [] }).near.length);
-  $("status").textContent = run.stopped ? "Stopped at the time limit — showing the best found so far. A longer time limit may find more." : (any ? "" : "");
-  render(true);
+  run.finished = true;
+  run.onDone(run);
 }
+
+// ---------- the search page ----------
+
+let last = null;          // {req, item, season, hc}: what the results on screen answer, for Copy link and Save
+let lastApplied = "";     // the request link already loaded into the form
+let notice = "";          // one line to show under the next finished search (a link replaced the visitor's season or mode)
+
+function go() {
+  if (!pickedItem) { $("status").textContent = "Search for an item you want first."; return; }
+  const req = readRequest(), { season, hc } = contextNow();
+  const secs = Math.max(1, Math.round(+$("secs").value || 0));
+  last = { req, item: pickedItem, season, hc };
+  const note = notice;
+  notice = "";
+  $("out").innerHTML = "";
+  $("actions").hidden = true;
+  $("go").disabled = true;
+  // the address bar now is the link to this search, so bookmarking the page keeps the request, season and mode
+  try { history.replaceState(null, "", requestHash(req, season, hc)); lastApplied = location.hash; } catch (e) { /* ignore */ }
+  startRun(req, pickedItem, season, hc, secs,
+    (r, final, status) => { if (status) $("status").textContent = status; else $("out").innerHTML = resultsHtml(r, false); },
+    (r) => {
+      $("go").disabled = false;
+      $("status").textContent = r.stopped ? "Stopped at the time limit — showing the best found so far. A longer time limit may find more." : note;
+      $("out").innerHTML = resultsHtml(r, true);
+      showActions();
+    },
+    () => { $("go").disabled = false; });
+}
+
+const labelOf = (item, req) => `${item.name} · ${req.w.map(([s]) => statAbbr(s)).join(", ") || "any roll"}`;
+
+function showActions() {
+  $("actions").hidden = false;
+  $("actionNote").textContent = "";
+  $("saveBtn").textContent = savedHas(last.req) ? "Saved ✓ (remove)" : "Save";
+}
+
+function initActions() {
+  $("copyLink").addEventListener("click", async () => {
+    if (!last) return;
+    const url = location.origin + location.pathname + requestHash(last.req, last.season, last.hc);
+    try { await navigator.clipboard.writeText(url); $("actionNote").textContent = "Link copied."; }
+    catch (e) { $("actionNote").textContent = "Copy the address from the address bar."; }
+  });
+  $("saveBtn").addEventListener("click", () => {
+    if (!last) return;
+    const now = savedToggle(last.req, labelOf(last.item, last.req));
+    $("saveBtn").textContent = now ? "Saved ✓ (remove)" : "Save";
+    $("actionNote").textContent = now ? "Added to Saved." : "Removed from Saved.";
+  });
+}
+
+// Load a request link into the form and run it. The link's season and mode win over the visitor's remembered ones.
+async function applyLink(parsed) {
+  const { req, season, hc } = parsed;
+  const it = itemList.find((x) => x.id === req.i);
+  if (!it || !info.classes[req.c]) { $("status").textContent = "This link names an item or class this version does not know."; return; }
+  const was = contextNow();
+  $("season").value = String(season);
+  $("hc").value = hc ? "1" : "0";
+  $("season").dispatchEvent(new Event("input", { bubbles: true }));
+  $("hc").dispatchEvent(new Event("change", { bubbles: true }));
+  $("cls").value = String(req.c);
+  pickedItem = it;
+  renderItemChips();
+  ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
+  $("floor").value = String(req.f);
+  $("top").value = String(req.n);
+  wants = req.w.map(([stem, min]) => ({ stem, min }));
+  await loadStems();   // drops any stat the item cannot roll and redraws the chips
+  if (was.season !== season || was.hc !== hc) {
+    notice = `Opened a link for Season ${season} · ${hc ? "Hardcore" : "Softcore"} (your own setting was ${was.season} · ${was.hc ? "Hardcore" : "Softcore"}; change it at the top).`;
+  }
+  go();
+}
+
+// ---------- the saved page: every saved request, computed for the season and mode chosen now ----------
+
+let savedToken = 0;       // bumped to abandon a computation in flight (leaving the page, or recomputing)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function stopSaved() { savedToken += 1; }
+
+function renderSaved() {
+  const host = $("viewSaved");
+  const list = savedList();
+  stopSaved();
+  if (!list.length) {
+    host.innerHTML = `<div class="card empty">Nothing saved yet. Run a search, then press Save under the results.</div>`;
+    return;
+  }
+  const { season, hc } = contextNow();
+  host.innerHTML = `<div class="bhead"><h2>Saved</h2><span class="small">Season ${season} &middot; ${hc ? "Hardcore" : "Softcore"}</span></div>
+    <div class="actions"><button type="button" class="btn" id="recompute">Recompute</button><span id="savedStatus" class="small"></span></div>` +
+    list.map((e) => `<section class="card saved" data-id="${esc(e.id)}"><div class="shead"><h3>${esc(e.label)}</h3>
+      <span><a href="${esc(requestHash(e.req, season, hc))}">open in search</a> <button type="button" class="link" data-rm>remove</button></span></div>
+      <div class="sout small">Waiting&hellip;</div></section>`).join("");
+  host.querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => {
+    const sec = b.closest("section.saved");
+    savedRemove(sec.dataset.id);
+    sec.remove();
+    if (!host.querySelector("section.saved")) renderSaved();
+  }));
+  $("recompute").addEventListener("click", renderSaved);
+  computeSaved(list, season, hc, ++savedToken);
+}
+
+function computeSaved(list, season, hc, token) {
+  const status = $("savedStatus");
+  const step = (k) => {
+    if (token !== savedToken) return;
+    if (k >= list.length) { status.textContent = ""; return; }
+    const e = list[k], req = e.req;
+    const item = itemList.find((x) => x.id === req.i);
+    const sec = [...$("viewSaved").querySelectorAll("section.saved")].find((s) => s.dataset.id === e.id);
+    if (!sec) { step(k + 1); return; }
+    const out = sec.querySelector(".sout");
+    if (!item || !info.classes[req.c]) { out.textContent = "This item is not in this version."; step(k + 1); return; }
+    status.textContent = `Computing ${k + 1} of ${list.length}…`;
+    startRun(req, item, season, hc, 20,
+      (r, final, st) => { if (!st) { out.classList.remove("small"); out.innerHTML = resultsHtml(r, false); } },
+      (r) => { out.classList.remove("small"); out.innerHTML = resultsHtml(r, true); step(k + 1); },
+      () => {});
+  };
+  step(0);
+}
+
+// ---------- routes ----------
+
+const routeOfHash = () => { try { return decodeURIComponent(location.hash.replace(/^#/, "").split("?")[0]) || "search"; } catch (e) { return "search"; } };
+
+// builds.js announces every view change (route + fragment); the engine may not be ready yet, in which case start() calls this again.
+function onRoute(route) {
+  if (!info) return;
+  if (route !== "saved") stopSaved();
+  if (route === "saved") renderSaved();
+  else if (route === "search") {
+    const h = location.hash;
+    const parsed = h !== lastApplied ? parseRequestHash(h) : null;
+    if (parsed) { lastApplied = h; applyLink(parsed); }
+  }
+}
+window.addEventListener("d3-route", (e) => onRoute(e.detail));
 
 // ---------- rendering ----------
 
@@ -319,7 +469,7 @@ const TIER_OF = { primal: "primal", crafted: "crafted", ancient: "ancient", norm
 
 
 
-function hitHtml(h, tier, snap) {
+function hitHtml(h, tier, snap, item) {
   const wantStems = new Set(snap);
   const matchedStems = new Set(h.matched.map((i) => snap[i]));
   const missing = snap.filter((_, i) => !h.matched.includes(i));
@@ -332,7 +482,7 @@ function hitHtml(h, tier, snap) {
   for (const s of snap) {
     if (matchedStems.has(s)) { seen.add(s); parts.push(`<span class="want">${statAbbr(s)}</span>`); }
   }
-  const onWeapon = WEAPON_SLOTS.has(run.item.slot);
+  const onWeapon = WEAPON_SLOTS.has(item.slot);
   for (const l of h.lines) {
     if (l.stem === "item power" || seen.has(l.stem) || isSecondary(l.stem) || l.stem === "Sockets" || l.stem === "Indestructible") continue;
     if (wantStems.has(l.stem)) continue;
@@ -366,8 +516,7 @@ function pickHits(key, r, snap, show) {
   return [...perfect, ...partial];
 }
 
-function render(final) {
-  if (!run) return;
+function resultsHtml(run, final) {
   const snap = run.wantsSnap;
   let html = "";
   if (run.warnings.size) html += `<div class="warn">${[...run.warnings].join("; ")}</div>`;
@@ -381,7 +530,7 @@ function render(final) {
     for (const h of pickHits(t.key, r, snap, run.show)) {
       if (shown.some((s) => s.matched >= h.matched.length && s.cost <= h.cost)) continue;
       shown.push({ matched: h.matched.length, cost: h.cost });
-      body += hitHtml(h, TIER_OF[t.key], snap);
+      body += hitHtml(h, TIER_OF[t.key], snap, run.item);
     }
   }
   if (shown.length) html += `<section class="card">${body}</section>`;
@@ -393,5 +542,5 @@ function render(final) {
         : "No passable recipe found. Try fewer stats or a lower good-roll floor.";
     html += `<section class="card"><div class="empty">${why}</div></section>`;
   }
-  $("out").innerHTML = html;
+  return html;
 }

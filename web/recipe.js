@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=81e356ef39";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=ff31a3dc0e";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -112,3 +112,52 @@ export function tooltipRows(lines) {
   const rank = (r) => (RANGE_STEMS.has(r.stem) ? 0 : MAIN.has(r.stem) ? 1 : isSecondary(r.stem) ? 3 : 2);
   return rows.map((r, i) => [r, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
 }
+
+// ---------- requests: shareable links and the saved list ----------
+// A request is what the player asked for, not the answer: {c: class index, i: item id, w: [[stem, min]], p: [Convert, Hope of Cain,
+// Reforge, Improve Legendary] prices as typed, f: good-roll floor %, n: recipes shown}. The same request on the same season and
+// mode always gives the same recipes, so a link (or a saved entry) only has to carry the request.
+export const DEFAULT_PRICES = ["0.75", "1", "5", "25"];
+
+export function requestHash(req, season, hc) {
+  const e = encodeURIComponent;
+  const w = req.w.map(([s, m]) => e(s) + (m === "" || m == null ? "" : "~" + e(m))).join(",");
+  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}`;
+}
+
+// -> {req, season, hc} or null when the fragment is not a request link
+export function parseRequestHash(hash) {
+  const m = /^#search\?(.*)$/.exec(hash || "");
+  if (!m) return null;
+  const q = new URLSearchParams(m[1]);
+  const d = decodeURIComponent;
+  const num = (k) => (q.has(k) && q.get(k) !== "" && !Number.isNaN(+q.get(k)) ? +q.get(k) : null);
+  const c = num("c"), i = num("i");
+  if (c === null || i === null) return null;
+  const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); return [d(s), d(v)]; });
+  const p = (q.get("p") || "").split(",").map(d);
+  return {
+    req: { c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1) },
+    season: Math.max(1, Math.round(num("s") || 40)), hc: q.get("m") === "hc",
+  };
+}
+
+export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}`;
+
+const SAVED_KEY = "d3r-saved";
+export function savedList() {
+  try { const v = JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); return Array.isArray(v) ? v.filter((e) => e && e.id && e.req) : []; } catch (e) { return []; }
+}
+function savedWrite(list) {
+  try { localStorage.setItem(SAVED_KEY, JSON.stringify(list)); } catch (e) { /* storage unavailable: the entry just will not persist */ }
+  window.dispatchEvent(new Event("d3-saved"));
+}
+export const savedHas = (req) => savedList().some((e) => e.id === savedId(req));
+export function savedToggle(req, label) {
+  const id = savedId(req), list = savedList();
+  const at = list.findIndex((e) => e.id === id);
+  if (at >= 0) list.splice(at, 1); else list.push({ id, label, req });
+  savedWrite(list);
+  return at < 0;
+}
+export function savedRemove(id) { savedWrite(savedList().filter((e) => e.id !== id)); }
