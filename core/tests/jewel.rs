@@ -111,3 +111,12 @@ fn played_primal_sources_have_no_socket() {
     assert_eq!(name, "Firebird's Eye");
     assert_eq!(stems, sorted(&["Int", "CriticalChance", "ArcanePowerOnCrit", "WeaponHitChill1h", "MaxArcanePower"]));
 }
+
+/// Played (LEDGER V174): season 40 hardcore Necromancer, Helm #1 (Andariel's Visage), Improve Legendary x3, Reforge = a primal WORN item with a
+/// random socket gets it forced, like jewelry (the current model without the rule gave All Res instead).
+#[test]
+fn played_primal_helm_has_a_socket() {
+    let (name, stems) = played(6, "Helm", 1, true, "PPPR");
+    assert_eq!(name, "Andariel's Visage");
+    assert_eq!(stems, sorted(&["DamageBonusCold", "Int", "Haste", "Sockets"]));
+}

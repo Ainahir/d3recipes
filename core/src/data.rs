@@ -115,8 +115,9 @@ pub struct Item {
     pub armor: bool,
     /// weapons never roll sockets on a primal
     pub weapon: bool,
-    /// a ring or an amulet (in the Ring or Amulet pool): a primal one gets a socket when it can have one (see `Sim::picks`)
-    pub jewelry: bool,
+    /// a worn item (in a Ring, Amulet, Helm, Chest, Legs, Cloak or class-head pool): a primal one gets a socket when it can have one
+    /// (see `Sim::picks`); off-hands (sources, shields, mojos, quivers, phylacteries) and weapons do not
+    pub worn: bool,
     pub icls: Option<usize>, // class index when the item is class-restricted
     /// Convert Set Item: set-id (0 = not a set item), global item_table.csv idx (one shared
     /// index space across every slot), and the per-class weight field (base_weight * class_weight[class]) used
@@ -244,7 +245,7 @@ impl Data {
                 sh: it.slot_type,
                 armor: it.armor,
                 weapon: it.weapon,
-                jewelry: false,
+                worn: false,
                 icls: if it.restricted_class >= 0 { Some(it.restricted_class as usize) } else { None },
                 setid: it.set_id,
                 idx: it.table_index,
@@ -272,10 +273,11 @@ impl Data {
                 Slot { name: s.name, key: s.key, pools, cross: s.cross }
             })
             .collect::<Vec<Slot>>();
-        for s in slots.iter().filter(|s| s.name == "Ring" || s.name == "Amulet") {
+        const WORN: [&str; 9] = ["Ring", "Amulet", "Helm", "Chest", "Legs", "Cloak", "SpiritStone_Monk", "VoodooMask", "WizardHat"];
+        for s in slots.iter().filter(|s| WORN.contains(&s.name.as_str())) {
             for pool in s.pools.iter() {
                 for &(i, _) in pool {
-                    items[i].jewelry = true;
+                    items[i].worn = true;
                 }
             }
         }

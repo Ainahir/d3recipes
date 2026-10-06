@@ -151,7 +151,8 @@ fn task_of(row: &Value) -> Option<Task> {
 /// `mystic`: keep the Mystic step possible (the row's Mystic rule); without it, every wanted stat must roll.
 fn query(t: &Task, o: &Opts, mystic: bool) -> Query {
     let min_match = if mystic { t.min_match } else { t.required.len() };
-    let node_cap = if mystic { o.mystic_budget.min(o.node_cap) } else { o.node_cap };
+    // the smaller Mystic budget only where the Mystic has something to do (a row without a Mystic step gets the full budget)
+    let node_cap = if mystic && (t.mystic.is_some() || t.min_match < t.required.len()) { o.mystic_budget.min(o.node_cap) } else { o.node_cap };
     serde_json::from_value(json!({
         "class": t.class, "slots": [t.slot], "items": t.items, "set_roots": true, "season": 40, "hardcore": o.hc, "eligible": true,
         "maxsteps": 100000, "max_primalize": o.max_improve, "max_convert": o.max_convert, "node_cap": node_cap,
@@ -194,7 +195,8 @@ fn good_enough(cp: &Checkpoint, required: &[String]) -> bool {
 }
 
 /// The row as the page reads it (see the old export_premade.py: `cost` = steps, `w` = weighted cost).
-fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool) -> Value {
+/// `moved`: no recipe rolls every required stat, so the Mystic adds this one (the lowest-ranked required stat) instead.
+fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, moved: Option<&String>) -> Value {
     let mut need: Vec<(i64, String)> = row["required_stats"]
         .as_array()
         .into_iter()
@@ -218,13 +220,26 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool) -
         return o;
     };
     let last = h.trail.last().unwrap();
+    let moved_task;
+    let t = match moved {
+        Some(m) => {
+            moved_task = Task { required: t.required.iter().filter(|s| *s != m).cloned().collect(), ..t.clone() };
+            need.retain(|n| &n.1 != m);
+            // the Mystic can do one stat: a row that also had a Mystic stat loses it
+            if let Some(old) = mystic.replace(m.clone()) {
+                o["nomystic"] = json!(old);
+            }
+            &moved_task
+        }
+        None => t,
+    };
     if dropped {
         // no recipe leaves room for the Mystic step: say which stat does not fit
         // (a two-stat row falls back to rolling both, so nothing is left for the Mystic there)
         o["nomystic"] = json!(mystic.take());
     }
     // one of two stats missing (min_match 1): the Mystic adds it
-    if !dropped && t.min_match < t.required.len() {
+    if !dropped && moved.is_none() && t.min_match < t.required.len() {
         if let Some(gone) = t.required.iter().find(|s| !last.lines.iter().any(|l| &&l.stem == s)) {
             need.retain(|n| &n.1 != gone);
             mystic = Some(gone.clone());
@@ -306,7 +321,7 @@ fn simple_row(slot: &str, item: &str, required: &[String], hit: &Hit) -> Value {
         "required_stats": required.iter().enumerate().map(|(i, s)| json!({"stem": s, "pos": i})).collect::<Vec<_>>()
     });
     let t = Task { class: 0, slot: slot.to_string(), items: vec![], required: required.to_vec(), min_match: required.len(), mystic: None, keep: vec![] };
-    let mut o = row_out(&row, Some(&t), Some(hit), false);
+    let mut o = row_out(&row, Some(&t), Some(hit), false, None);
     if let Some(m) = o.as_object_mut() {
         m.remove("cheap");
     }
@@ -345,7 +360,7 @@ fn main() {
     }
     // the slowest searches first, roughly: set items (many roots) before the rest
     let next = AtomicUsize::new(0);
-    let results: Mutex<HashMap<usize, (Option<Hit>, u64, bool, bool)>> = Mutex::new(HashMap::new());
+    let results: Mutex<HashMap<usize, (Option<Hit>, u64, bool, bool, Option<String>)>> = Mutex::new(HashMap::new());
     eprintln!("{} rows -> {} distinct searches on {} threads", doc["builds"].as_array().unwrap().iter().map(|b| b["rows"].as_array().unwrap().len()).sum::<usize>(), tasks.len(), o.threads);
     std::thread::scope(|s| {
         for _ in 0..o.threads {
@@ -367,17 +382,29 @@ fn main() {
                         nodes += r.status.nodes;
                         dropped = true;
                     }
+                    // no recipe rolls every required stat (e.g. the item's only free primary is taken by the forced socket): the Mystic adds
+                    // the lowest-ranked required stat instead, the same rule as a row naming two stats and no third
+                    let mut moved = None;
+                    if r.full.is_empty() && o.mystic_check && !t.required.is_empty() {
+                        let m = t.required.last().unwrap().clone();
+                        let t2 = Task { required: t.required[..t.required.len() - 1].to_vec(), min_match: t.required.len() - 1, mystic: Some(m.clone()), ..t.clone() };
+                        r = run_query(d.clone(), query(&t2, &o, true), 200_000);
+                        nodes += r.status.nodes;
+                        if !r.full.is_empty() {
+                            (moved, dropped) = (Some(m), false);
+                        }
+                    }
                     let hit = r.full.into_iter().next();
                     eprintln!(
                         "  [{i}] {} {:?}: {}{} ({} nodes, {:.1}s)",
                         CLASSES[t.class],
                         t.required,
                         hit.as_ref().map_or("NOT FOUND".to_string(), |h| format!("{} cost {}", h.name, h.cost)),
-                        if dropped { " (no Mystic step)" } else { "" },
+                        if dropped { " (no Mystic step)".to_string() } else if let Some(m) = &moved { format!(" (the Mystic adds {m})") } else { String::new() },
                         nodes,
                         t1.elapsed().as_secs_f64()
                     );
-                    results.lock().unwrap().insert(i, (hit, nodes, r.status.capped, dropped));
+                    results.lock().unwrap().insert(i, (hit, nodes, r.status.capped, dropped, moved));
                 }
             });
         }
@@ -401,7 +428,7 @@ fn main() {
             let hit = res.and_then(|x| x.0.as_ref());
             rows += 1;
             found += hit.is_some() as usize;
-            out_rows.push(row_out(r, task.as_ref(), hit, res.map_or(false, |x| x.3)));
+            out_rows.push(row_out(r, task.as_ref(), hit, res.map_or(false, |x| x.3), res.and_then(|x| x.4.as_ref())));
         }
         builds.push(json!({"id": slug(b["title"].as_str().unwrap()), "title": b["title"], "class": b["class"], "rows": out_rows}));
     }

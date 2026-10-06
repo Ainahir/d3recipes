@@ -179,9 +179,9 @@ pub struct Sim {
     ban_sockets: bool,
     base: HashMap<(usize, usize, bool), Rc<BaseElig>>,
     twins: HashMap<usize, [usize; 7]>,
-    /// a primal ring or amulet is being rolled: if it can have a socket, its first primary pick lands it (see `picks`). Played: a
-    /// Squirt's Necklace and a Stone of Jordan got it; two primal sources (Etched Sigil, Firebird's Eye) did not (LEDGER V170-V172),
-    /// so other items keep the ordinary roll until tested
+    /// a primal worn item is being rolled: if it can have a socket, its first primary pick lands it (see `picks`). Played: a Squirt's
+    /// Necklace, a Stone of Jordan (natural and crafted) and an Andariel's Visage got it; two primal sources (Etched Sigil, Firebird's Eye)
+    /// did not (LEDGER V170-V174); off-hands keep the ordinary roll
     force_socket: bool,
 }
 
@@ -418,8 +418,8 @@ impl Sim {
         kinds.extend(std::iter::repeat(None).take(c));
         kinds.truncate(n);
         let mut cands: Vec<usize> = Vec::with_capacity(256);
-        // A primal ring or amulet that can have a socket always has it (played: a Squirt's Necklace, crafted and natural primal,
-        // and a Stone of Jordan; primal sources did not, see `force_socket`). The first primary pick still makes its draw, but what it
+        // A primal worn item that can have a socket always has it (played: a Squirt's Necklace, a Stone of Jordan and an Andariel's
+        // Visage; primal sources did not, see `force_socket`). The first primary pick still makes its draw, but what it
         // lands is the item's highest socket affix, past the affix budget; the later picks then see it on the item.
         // Nothing changes when a fixed slot already gave a socket, or when the item has no primary pick at all (Ring of the
         // Zodiac, whose primaries are all fixed, never has one).
@@ -522,7 +522,7 @@ impl Sim {
         let unresolved = self.fixed_slots(item, &mut rng, swaps, &mut existing);
         rng.draw(); // discarded draw (legendary)
         let lead = if weapon_primal { unresolved } else { 0 };
-        self.force_socket = primal && item.jewelry;
+        self.force_socket = primal && item.worn;
         self.picks(item_idx, &mut rng, swaps, false, lead, &mut existing);
         self.force_socket = false;
         self.ban_sockets = false;
@@ -540,7 +540,7 @@ impl Sim {
         let mut existing = Vec::with_capacity(6);
         self.fixed_slots(item, &mut rng, swaps, &mut existing);
         rng.draw();
-        self.force_socket = primal && item.jewelry;
+        self.force_socket = primal && item.worn;
         self.picks(item_idx, &mut rng, swaps, false, 0, &mut existing);
         self.force_socket = false;
         existing
@@ -596,7 +596,7 @@ impl Sim {
         let unresolved = self.fixed_slots(item, &mut rng, 2, &mut existing);
         rng.draw(); // one extra draw before the picks
         let lead = if item.weapon { unresolved } else { 0 };
-        self.force_socket = item.jewelry;
+        self.force_socket = item.worn;
         self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
         self.force_socket = false;
         self.ban_sockets = false;
