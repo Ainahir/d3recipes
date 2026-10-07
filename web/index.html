@@ -198,7 +198,9 @@
   .rec .cheap { margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--line); }
   .modeflag { margin: 0 0 12px; }
   dialog#rules { max-width: 440px; width: calc(100% - 32px); padding: 20px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-  dialog#rules::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog#rules::backdrop, dialog.build-conflicts::backdrop { background: rgba(0, 0, 0, .6); }
+  dialog.build-conflicts { max-width: 600px; width: calc(100% - 32px); max-height: 80vh; overflow: auto; padding: 20px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+  dialog.build-conflicts .btn { margin: 4px; }
   dialog#rules h2 { margin: 0 0 8px; font-size: 1.15rem; text-align: center; }
   dialog#rules ul { margin: 0 0 16px; padding-left: 20px; }
   dialog#rules li { margin: 6px 0; }
@@ -365,7 +367,7 @@
 <script defer src="analytics.js"></script>
 <script type="module" src="builds.js?v=edit-builds-export-1"></script>
 <script type="module" src="app.js?v=build-table-1"></script>
-<script type="module" src="create-build.js?v=edit-builds-export-1"></script>
+<script type="module" src="create-build.js?v=import-conflicts-1"></script>
 <script type="module" src="search-builds.js?v=edit-builds-export-1"></script>
 </body>
 </html>
