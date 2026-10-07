@@ -517,7 +517,7 @@ const TIER_OF = { primal: "primal", crafted: "crafted", ancient: "ancient", norm
 
 
 
-function hitHtml(h, tier, snap, item, cls) {
+function hitHtml(h, tier, snap, item, cls, season) {
   const wantStems = new Set(snap);
   const matchedStems = new Set(h.matched.map((i) => snap[i]));
   const missing = snap.filter((_, i) => !h.matched.includes(i));
@@ -545,8 +545,10 @@ function hitHtml(h, tier, snap, item, cls) {
   }).join("");
   const mats = matsHtml(materials(h));
   const craftedNote = tier === "crafted" ? `<div class="small">Improve Legendary primals: only one can be worn per character.</div>` : "";
+  const crucibleNote = tier === "crafted" && supportsSanctify(season)
+    ? `<div class="small">Or use an Angelic Crucible for the last step to create a Sanctified item. Its seasonal power replaces an ordinary secondary affix on six-affix items. The listed cost and materials assume Improve Legendary with ashes.</div>` : "";
   return `<article class="hit"><div class="head"><span class="tag ${tagCls}">${tagText}</span><span class="aff">${parts.join(", ")}</span></div>
-    ${stepsHtml(h, missing, wantStems, { cls, name: (c) => className(info.classes[c]) })}${craftedNote}<div class="mats">${mats}</div>
+    ${stepsHtml(h, missing, wantStems, { cls, name: (c) => className(info.classes[c]) })}${craftedNote}${crucibleNote}<div class="mats">${mats}</div>
     <details class="full"><summary>Full tooltip</summary><div class="lines">${lines}</div></details></article>`;
 }
 
@@ -578,7 +580,7 @@ function resultsHtml(run, final) {
     for (const h of pickHits(t.key, r, snap, run.show)) {
       if (shown.some((s) => s.matched >= h.matched.length && s.cost <= h.cost)) continue;
       shown.push({ matched: h.matched.length, cost: h.cost });
-      body += hitHtml(h, TIER_OF[t.key], snap, run.item, run.base.class);
+      body += hitHtml(h, TIER_OF[t.key], snap, run.item, run.base.class, run.base.season);
     }
   }
   if (shown.length) html += `<section class="card">${body}</section>`;
