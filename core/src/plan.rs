@@ -158,6 +158,11 @@ pub struct Query {
     /// counted: it changes no cube step, only who enchants, and costs `cost_switch`.
     #[serde(default = "d_unlimited")]
     pub max_switch: u32,
+    /// also craft the root (Hope of Cain) as every class in `switch`, each from its own chain: on an item of no class each class's
+    /// pool picks other items at other positions, and rolls the same item differently. Crafting as another class than the query's
+    /// counts as one hand-over (`max_switch`, `cost_switch`), so with none allowed only the query's class crafts.
+    #[serde(default)]
+    pub craft_any: bool,
     #[serde(default = "d_top")]
     pub top: usize,
     /// stop when the next node would cost more than this (0 = unlimited)
@@ -198,6 +203,8 @@ pub struct Hit {
     pub route: Vec<(char, u32)>,
     /// the hero class doing each group of `route` (all the query's class unless `switch` allowed others)
     pub route_class: Vec<usize>,
+    /// the hero class doing the Hope of Cain steps (the query's class unless `craft_any`)
+    pub craft_class: usize,
     pub item: u32,
     pub name: String,
     /// the item Hope of Cain itself lands on — usually equal to `name`, but can differ once a Convert Set Item
@@ -258,7 +265,7 @@ struct NodeRec {
     depth: u16,
     parent: u32,
     op: u8, // b'H' root, b'R', b'P', b'C' (Convert)
-    cls: u8, // the hero class that did this step (the root: the query's class)
+    cls: u8, // the hero class that did this step (the root: the crafting class)
     slot: u16,
     n: u16,
 }
@@ -272,6 +279,7 @@ struct Chain {
     slot: usize, // index into Data::slots
     name_idx: u16,
     upto: u32,
+    cls: usize, // the hero class crafting this chain
 }
 
 /// Weapon damage lines: never worth rolling off at the Mystic (the page's RANGE_STEMS).
@@ -362,6 +370,7 @@ impl Search {
         let d = self.d.clone();
         self.root_items = self.q.items.clone();
         let mut slots = self.q.slots.clone();
+        let crafters: Vec<usize> = if self.q.craft_any && self.q.max_switch > 0 { self.heroes.clone() } else { vec![self.q.class] };
         if self.q.set_roots && self.q.max_convert > 0 {
             for &id in self.q.items.iter() {
                 let Some(ii) = d.items.iter().position(|it| it.id == id) else { continue };
@@ -375,7 +384,7 @@ impl Search {
                     }
                 }
                 for s in d.slots.iter() {
-                    if !slots.contains(&s.name) && s.pools[self.q.class].iter().any(|&(i, _)| mates.contains(&i)) {
+                    if !slots.contains(&s.name) && crafters.iter().any(|&c| s.pools[c].iter().any(|&(i, _)| mates.contains(&i))) {
                         slots.push(s.name.clone());
                     }
                 }
@@ -394,7 +403,9 @@ impl Search {
                 continue;
             }
             self.slot_names.push(name.clone());
-            self.chains.push(Chain { slot: si, name_idx: (self.slot_names.len() - 1) as u16, upto: 0 });
+            for &c in crafters.iter().filter(|&&c| !d.slots[si].pools[c].is_empty()) {
+                self.chains.push(Chain { slot: si, name_idx: (self.slot_names.len() - 1) as u16, upto: 0, cls: c });
+            }
         }
         self.feed_chains();
     }
@@ -424,12 +435,13 @@ impl Search {
 
     fn extend_chain(&mut self, ci: usize) {
         let d = self.d.clone();
-        let (si, name_idx, done) = (self.chains[ci].slot, self.chains[ci].name_idx, self.chains[ci].upto);
+        let (si, name_idx, done, cls) = (self.chains[ci].slot, self.chains[ci].name_idx, self.chains[ci].upto, self.chains[ci].cls);
         let to = (done + CHAIN_CHUNK).min(self.q.maxpos);
         self.chains[ci].upto = to;
         let slot = &d.slots[si];
-        let pool = &slot.pools[self.q.class];
-        let roots = chain_roots(pool, slot.key, self.q.season, self.q.hardcore, to, self.q.eligible, self.q.class, &d.items);
+        let pool = &slot.pools[cls];
+        let roots = chain_roots(pool, slot.key, self.q.season, self.q.hardcore, to, self.q.eligible, cls, &d.items);
+        self.sim.hero = cls;
         for r in roots {
             if r.n <= done || r.n <= self.q.n0 {
                 continue;
@@ -439,19 +451,23 @@ impl Search {
                 continue;
             }
             let q = if r.primal { Q::Primal } else if r.ancient { Q::Ancient } else { Q::Normal };
-            let cost = (r.n - self.q.n0) as u64 * self.q.cost_h;
+            let sw = (cls != self.q.class) as u8;
+            let cost = (r.n - self.q.n0) as u64 * self.q.cost_h + sw as u64 * self.q.cost_switch;
             let idx = self.nodes.len() as u32;
-            self.nodes.push(NodeRec { item: r.item as u32, seed: r.seed, q, pc: 0, sc: 0, cc: 0, sw: 0, depth: 0, parent: u32::MAX, op: b'H', cls: self.q.class as u8, slot: name_idx, n: r.n as u16 });
+            self.nodes.push(NodeRec { item: r.item as u32, seed: r.seed, q, pc: 0, sc: 0, cc: 0, sw, depth: 0, parent: u32::MAX, op: b'H', cls: cls as u8, slot: name_idx, n: r.n as u16 });
             self.root_x0.insert(idx, r.x0);
             if self.need_lines(q) {
                 let aff = self.sim.drop_item(r.item, r.x0, r.ancient || r.primal, r.primal);
                 let lines = if r.primal { self.sim.values_max(r.item, &aff) } else { self.sim.values(r.item, r.seed, &aff) };
                 self.register(idx, cost, q, r.item, &aff, lines);
             }
-            if self.seen.insert((r.item as u32, r.seed, 0, 0, 0, 0)) {
+            // ponytail: another crafter landing the same item and seed is expanded once, by the first (as for hand-overs in
+            // `expand`); its own steps then cost a hand-over. Keying the state by crafter would keep them apart at up to 7x the nodes.
+            if self.seen.insert(self.key(r.item as u32, r.seed, 0, 0, 0, sw)) {
                 self.push(cost, idx);
             }
         }
+        self.sim.hero = self.q.class;
     }
 
     /// Duplicate check: a count with no real limit (255 or more) is not part of the state, so an item reached again by another
@@ -549,7 +565,7 @@ impl Search {
         m
     }
 
-    fn route_of(&self, mut idx: u32) -> (Vec<(char, u32)>, Vec<usize>, u16, u16, usize) {
+    fn route_of(&self, mut idx: u32) -> (Vec<(char, u32)>, Vec<usize>, u16, u16, usize, usize) {
         let mut ops: Vec<(u8, u8)> = Vec::new();
         loop {
             let n = &self.nodes[idx as usize];
@@ -567,7 +583,7 @@ impl Search {
                         }
                     }
                 }
-                return (route, who, n.slot, n.n, n.item as usize);
+                return (route, who, n.slot, n.n, n.item as usize, n.cls as usize);
             }
             ops.push((n.op, n.cls));
             idx = n.parent;
@@ -626,7 +642,7 @@ impl Search {
         if !(is_full || is_near || is_notable) {
             return;
         }
-        let (route, route_class, slot, n, root_item) = self.route_of(idx);
+        let (route, route_class, slot, n, root_item, craft_class) = self.route_of(idx);
         let node = &self.nodes[idx as usize];
         let hit = Hit {
             cost,
@@ -635,6 +651,7 @@ impl Search {
             hope: n as u32 - self.q.n0,
             route,
             route_class,
+            craft_class,
             item: self.d.items[node.item as usize].id,
             name: self.d.items[node.item as usize].name.clone(),
             root_name: self.d.items[root_item].name.clone(),
@@ -785,7 +802,6 @@ impl Search {
                 }
             }
         }
-        // Hope of Cain roots are always rolled by the query's own hero
         self.sim.hero = self.q.class;
     }
 

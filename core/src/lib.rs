@@ -2,6 +2,7 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 pub mod data;
 pub mod plan;
+pub mod resolve;
 pub mod sim;
 
 use data::Data;
