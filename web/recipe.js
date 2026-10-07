@@ -111,6 +111,35 @@ export function stepsHtml(h, missing, wantStems, heroes) {
   return `<ul class="steps">${out.map((s) => `<li>${s}</li>`).join("")}</ul>`;
 }
 
+// DOM rendering for build searches: engine labels and checkpoint names remain plain text.
+export function stepsElement(h, missing, wantStems, heroes) {
+  const list = document.createElement('ul');list.className = 'steps';
+  const cps = h.checkpoints || [], who = h.route_class || [];
+  const switched = heroes && who.some(c => c !== heroes.cls);
+  const step = text => {const li=document.createElement('li');li.textContent=text;list.append(li);return li;};
+  const as = (li,c) => {const bold=document.createElement('b');bold.textContent='as '+heroes.name(c);li.append(' ',bold);};
+  const note = (li,cp,prev) => {const span=document.createElement('span');span.className='note';span.textContent='(stop on '+stopOn(cp,prev)+')';li.append(' ',span);};
+  const first=step('Craft & upgrade '+h.hope+' '+slotPlural(h.slot,h.hope));
+  if(switched)as(first,heroes.cls);
+  if((h.hope>7||h.route.some(([op])=>op==='C')||h.root_name!==h.name)&&cps[0])note(first,cps[0],null);
+  const operations={R:'Reforge',P:'Improve with ashes',C:'Convert'};
+  h.route.forEach(([op,n],k)=>{
+    const li=step(operations[op]?operations[op]+' ×'+n:op);
+    if(switched)as(li,who[k]);
+    if(n>7&&k!==h.route.length-1&&cps[k+1])note(li,cps[k+1],cps[k]);
+  });
+  if(missing.length){
+    const legal=(h.mystic||[]).filter(s=>!wantStems.has(s)&&!RANGE_STEMS.has(s));
+    const holder=who.length?who[who.length-1]:heroes&&heroes.cls;
+    const li=step('Mystic');
+    if(legal.length&&missing.length===1){
+      if(heroes&&h.mystic_class!==undefined&&(h.mystic_class!==holder||switched))as(li,h.mystic_class);
+      li.append(': '+legal.map(statName).join(' or ')+' → '+statName(missing[0]));
+    }else li.append(': roll '+missing.map(statName).join(' or '));
+  }
+  return list;
+}
+
 // Full-tooltip rows. A weapon-damage roll arrives as two lines (minimum, then the spread added on top); show one "min–max" row.
 export function tooltipRows(lines) {
   const rows = [];

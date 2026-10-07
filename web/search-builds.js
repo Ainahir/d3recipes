@@ -1,7 +1,6 @@
 import {baseQuery,pickHits} from './search-settings.js?v=build-table-1';
 import {statName,CLASS_NAMES} from './stats.js?v=1fc672fd23';
-import {stepsHtml,tooltipRows} from './recipe.js?v=1fc672fd23';
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+import {stepsElement,tooltipRows} from './recipe.js?v=build-result-dom-1';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
@@ -81,7 +80,15 @@ function showMatches(row){
  const snap=row.wants.map(w=>w.stem);let chosen=[];
  for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){if(chosen.some(x=>x.hit.matched.length>=hit.matched.length&&x.hit.cost<=hit.cost))continue;chosen.push({tier,hit});}}
  const best=chosen[0];row.best=best;
- document.getElementById('build-match-'+row.index).innerHTML=best?`<strong>${esc(best.tier==='crafted'?'Crafted primal':best.tier)}</strong> · ${best.hit.matched.length}/${snap.length} stats${row.limited?' · Best found within limits':''}<details><summary>Recipe and stats</summary>${stepsHtml(best.hit,snap.filter((_,i)=>!best.hit.matched.includes(i)),new Set(snap),{cls:build.class,name:c=>CLASS_NAMES[info.classes[c]]||info.classes[c]})}<div class="lines">${tooltipRows(best.hit.lines).map(r=>`<span>${esc(r.label)}</span><span>${esc(r.value)}</span>`).join('')}</div></details>`:'No matching recipe found'+(row.limited?' within limits':'');
+ const cell=document.getElementById('build-match-'+row.index);cell.replaceChildren();
+ if(best){
+   const quality=document.createElement('strong');quality.textContent=best.tier==='crafted'?'Crafted primal':best.tier;
+   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Recipe and stats';
+   const steps=stepsElement(best.hit,snap.filter((_,i)=>!best.hit.matched.includes(i)),new Set(snap),{cls:build.class,name:c=>CLASS_NAMES[info.classes[c]]||info.classes[c]});
+   const lines=document.createElement('div');lines.className='lines';
+   for(const row of tooltipRows(best.hit.lines)){const label=document.createElement('span'),value=document.createElement('span');label.textContent=row.label;value.textContent=row.value;lines.append(label,value);}
+   details.append(summary,steps,lines);cell.append(quality,' · '+best.hit.matched.length+'/'+snap.length+' stats'+(row.limited?' · Best found within limits':''),details);
+ }else cell.textContent='No matching recipe found'+(row.limited?' within limits':'');
  document.getElementById('build-cost-'+row.index).textContent=best?(best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2}):'—';
 }
 worker.onmessage=({data:m})=>{

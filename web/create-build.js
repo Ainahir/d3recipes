@@ -3,7 +3,6 @@ import { parseBuildToml } from './build-toml.js?v=create-build-import-1';
 import { combo } from './affix-picker.js?v=plain-text-1';
 import { CLASS_NAMES, STATS, statName, HIDDEN } from './stats.js?v=1fc672fd23';
 const $=id=>document.getElementById('build-'+id);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
 const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders:['Shoulders'],Chest:['Chest','Cloak'],Hands:['Gloves'],Wrists:['Bracers'],Waist:['Belt','MightyBelt'],Legs:['Legs'],Feet:['Boots'],Amulet:['Amulet'],'Ring 1':['Ring'],'Ring 2':['Ring']};
 let workerFailure=null;
