@@ -85,13 +85,14 @@ export function stepsHtml(h, missing, wantStems, heroes) {
   const out = [];
   const cps = h.checkpoints || [];
   const who = h.route_class || [];
-  const switched = heroes && who.some((c) => c !== heroes.cls);
+  const crafter = h.craft_class ?? (heroes && heroes.cls);
+  const switched = heroes && (crafter !== heroes.cls || who.some((c) => c !== heroes.cls));
   const as = (c) => (switched ? ` <b>as ${heroes.name(c)}</b>` : "");
   // Long steps say what to stop on (any count above 7): a player may pass the same item several times on the way,
   // and the roll of its main stat tells the right one apart.
   const hopeNote = (h.hope > 7 || h.route.some(([op]) => op === "C") || h.root_name !== h.name) && cps[0]
     ? ` <span class="note">(stop on ${stopOn(cps[0], null)})</span>` : "";
-  out.push(`Craft &amp; upgrade ${h.hope} ${slotPlural(h.slot, h.hope)}${switched ? as(heroes.cls) : ""}${hopeNote}`);
+  out.push(`Craft &amp; upgrade ${h.hope} ${slotPlural(h.slot, h.hope)}${switched ? as(crafter) : ""}${hopeNote}`);
   h.route.forEach(([op, n], k) => {
     const last = k === h.route.length - 1;
     const cp = cps[k + 1];
@@ -102,7 +103,7 @@ export function stepsHtml(h, missing, wantStems, heroes) {
     // a search result names the lines the Mystic may swap and, when another class must enchant, the hero
     const legal = (h.mystic || []).filter((s) => !wantStems.has(s) && !RANGE_STEMS.has(s));
     // compared with the hero holding the item after the last cube step (the creator when nothing was handed over)
-    const holder = who.length ? who[who.length - 1] : heroes && heroes.cls;
+    const holder = who.length ? who[who.length - 1] : crafter;
     const by = heroes && h.mystic_class !== undefined && (h.mystic_class !== holder || switched) ? ` <b>as ${heroes.name(h.mystic_class)}</b>` : "";
     out.push(legal.length && missing.length === 1
       ? `Mystic${by}: ${legal.map((s) => statName(s)).join(" or ")} &rarr; ${statName(missing[0])}`
