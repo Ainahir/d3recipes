@@ -107,8 +107,6 @@ fn name_alias(n: &str) -> Option<&'static str> {
     Some(match n {
         "coe" => "convention of elements",
         "squirts" => "squirts necklace",
-        // the in-game name; the dumped item table calls the same Ring-pool item just "Ring of the Zodiac"
-        "obsidian ring of the zodiac" => "ring of the zodiac",
         _ => return None,
     })
 }
