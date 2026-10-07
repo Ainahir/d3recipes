@@ -56,8 +56,19 @@ function renderBuild(){
    cell('Not searched','build-match-'+row.index);cell('—','build-cost-'+row.index);
    return tr;
  }));
- $('rows').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{const row=rows[+el.dataset.row];row.owned=el.checked;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Not searched';document.getElementById('build-cost-'+row.index).textContent='—';recommendPrimal();if(active?.row===row){worker.postMessage({type:'cancel'});job++;nextRow();}}));$('run').disabled=!info||!build;
+ $('rows').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>setOwned(rows[+el.dataset.row],el.checked)));$('run').disabled=!info||!build;
  }catch(e){status.textContent=e.message;}
+}
+function setOwned(row,owned){
+ row.owned=owned;row.best=null;row.results={};
+ document.getElementById('build-match-'+row.index).textContent=owned?'Excluded from search':'Not searched';
+ document.getElementById('build-cost-'+row.index).textContent='—';
+ if(active){
+   active.queue=active.queue.filter(queued=>queued!==row);
+   if(owned&&active.row===row){worker.postMessage({type:'cancel'});job++;nextRow();}
+   else if(!owned&&active.row!==row)active.queue.push(row);
+ }
+ recommendPrimal();
 }
 select.addEventListener('change',renderBuild);
 $('cancel').addEventListener('click',()=>{cancel();status.textContent='Search cancelled.';});
