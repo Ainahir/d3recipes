@@ -152,7 +152,7 @@ function savedHtml() {
 
 function navHtml(data) {
   if (!listed(data)) {
-    return `<div class="grp"><button type="button" class="nb mode"${route === "search" ? ' aria-current="page"' : ""} data-route="search">Custom search</button></div>` + savedHtml() +
+    return `<div class="grp"><button type="button" class="nb mode"${route === "search" ? ' aria-current="page"' : ""} data-route="search">Custom search</button><button type="button" class="nb mode" data-route="create-build">Edit builds</button><button type="button" class="nb mode" data-route="search-builds">Search build items</button></div>` + savedHtml() +
       `<div class="grp"><span class="small">No prepared builds for season ${Math.max(1, Math.round(+$("season").value || 40))}. Custom search works for any season.</span></div>`;
   }
   const groups = [];
@@ -162,7 +162,7 @@ function navHtml(data) {
     g.list.push(b);
   }
   const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${id}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
-  return `<div class="grp">${btn("search", "Custom search", "mode")}</div>` + savedHtml() +
+  return `<div class="grp">${btn("search", "Custom search", "mode")}${btn("create-build", "Edit builds", "mode")}${btn("search-builds", "Search build items", "mode")}</div>` + savedHtml() +
     (data.staples && data.staples.length ? `<div class="grp"><span class="gl">Any class</span>${btn("staples", "Staples")}${data.salvage && data.salvage.length ? btn("salvage", "Cheap primals") : ""}</div>` : "") +
     `<div class="grp"><span class="gl top">Builds</span></div>` +
     groups.map((g) => `<div class="grp"><span class="gl">${esc(className(g.cls))}</span>${g.list.map((b) => btn(b.id, esc(b.title))).join("")}</div>`).join("");
@@ -170,9 +170,11 @@ function navHtml(data) {
 
 let announced = "";
 function show() {
-  if (current && !listed(current) && route !== "search" && route !== "saved") route = "search";   // a build link from another season: fall back to the search
-  const isBuild = route !== "search" && route !== "saved";   // "staples" and every build id share the build view
+  if (current && !listed(current) && route !== "search" && route !== "create-build" && route !== "search-builds" && route !== "saved") route = "search";   // a build link from another season: fall back to the search
+  const isBuild = route !== "search" && route !== "create-build" && route !== "search-builds" && route !== "saved";   // "staples" and every build id share the build view
   $("viewSearch").hidden = route !== "search";
+$("viewCreateBuild").hidden = route !== "create-build";
+$("viewSearchBuilds").hidden = route !== "search-builds";
   $("viewSaved").hidden = route !== "saved";
   $("viewBuild").hidden = !isBuild;
   if (current) {
@@ -204,7 +206,7 @@ function fromHash() {
   let h = "";
   try { h = decodeURIComponent(location.hash.replace(/^#/, "").split("?")[0]); } catch (e) { /* malformed: start page */ }
   route = h || "search";
-  if (!["search", "staples", "salvage", "saved"].includes(route) && current && !current.builds.some((b) => b.id === route)) route = "search";
+  if (!["search", "create-build", "search-builds", "staples", "salvage", "saved"].includes(route) && current && !current.builds.some((b) => b.id === route)) route = "search";
 }
 
 async function refresh() {
@@ -249,4 +251,6 @@ $("season").addEventListener("input", show);
 // nav is empty until the data arrives; the search view alone must work if the fetch fails, so show it at once.
 fromHash();
 $("viewSearch").hidden = route !== "search";
+$("viewCreateBuild").hidden = route !== "create-build";
+$("viewSearchBuilds").hidden = route !== "search-builds";
 refresh();
