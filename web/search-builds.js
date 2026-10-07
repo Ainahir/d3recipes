@@ -17,10 +17,16 @@ function refresh() {
     if (!Array.isArray(builds)) throw new Error('Invalid saved build data');
     select.replaceChildren(new Option('Choose a saved build', ''));
     for (const build of builds) select.add(new Option(build.name, build.id));
-    if (builds.some(build => build.id === selected)) select.value = selected;
-    if(build?.id===selected) build=builds.find(b=>b.id===selected);
-    status.textContent = builds.length ? '' : 'No saved builds yet. Create a build to get started.';
+    const current = builds.find(record => record.id === selected);
+    if (current) select.value = selected;
+    const changed = JSON.stringify(build) !== JSON.stringify(current);
+    if (changed) renderBuild();
+    if (!builds.length) status.textContent = 'No saved builds yet. Create a build to get started.';
+    else if (changed) status.textContent = current ? 'Saved build changed. Search again with its updated items and stats.' : 'Selected build is no longer saved. Choose another build.';
+    else if (!active) status.textContent = '';
   } catch (error) {
+    cancel();build=undefined;rows=[];$('rows').replaceChildren();$('run').disabled=true;
+    $('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';
     select.replaceChildren(new Option('Choose a saved build', ''));
     status.textContent = 'Could not load saved builds: ' + error.message;
   }
