@@ -298,6 +298,8 @@ pub struct Search {
     nodes: Vec<NodeRec>,
     heap: BinaryHeap<Reverse<(u64, u64, u32)>>,
     seen: HashSet<(u32, u32, u8, u8, u8)>,
+    /// root states by (item, seed, hand-overs, crafter): the same item and seed from another crafter is a state of its own
+    seen_roots: HashSet<(u32, u32, u8, u8)>,
     seq: u64,
     full: Vec<(u64, Hit)>,
     near: Vec<(u64, Hit)>,
@@ -340,6 +342,7 @@ impl Search {
             nodes: Vec::new(),
             heap: BinaryHeap::new(),
             seen: HashSet::new(),
+            seen_roots: HashSet::new(),
             seq: 0,
             full: Vec::new(),
             near: Vec::new(),
@@ -453,9 +456,14 @@ impl Search {
                 let lines = if r.primal { self.sim.values_max(r.item, &aff) } else { self.sim.values(r.item, r.seed, &aff) };
                 self.register(idx, cost, q, r.item, &aff, lines);
             }
-            // ponytail: another crafter landing the same item and seed is expanded once, by the first (as for hand-overs in
-            // `expand`); its own steps then cost a hand-over. Keying the state by crafter would keep them apart at up to 7x the nodes.
-            if self.seen.insert(self.key(r.item as u32, r.seed, 0, 0, sw)) {
+            // Each crafter's root is expanded on its own: the steps after it are rolled by that crafter, and a route another crafter
+            // starts can need one hand-over fewer (or stay inside `max_switch`) than the one that reached the same item and seed first.
+            // Measured on the prepared lists, this adds a few dozen nodes in 81M. `seen` still gets the state, so a later step landing on
+            // it is not queued again.
+            let state = self.key(r.item as u32, r.seed, 0, 0, sw);
+            self.seen.insert(state);
+            let first = self.seen_roots.insert((state.0, state.1, state.4, cls as u8));
+            if first {
                 self.push(cost, idx);
             }
         }
