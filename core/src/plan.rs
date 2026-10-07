@@ -351,6 +351,9 @@ impl Search {
             done: false,
             capped: false,
         };
+        if s.q.max_sanctify > 0 && !(s.q.season >= 40 && (s.q.season - 40) % 6 == 0) {
+            s.warnings.push("Sanctification is enabled for an unsupported season. These results are not supported; use them only for emulator testing.".into());
+        }
         s.init_roots();
         s
     }
@@ -749,7 +752,7 @@ impl Search {
         }
         // Sanctify changes the future seed; its power replacement is not modeled.
         // Use it as preparation, never as a final crafted-primal result.
-        if self.q.season >= 40 && (self.q.season - 40) % 6 == 0 && (sc as u32) < self.q.max_sanctify {
+        if (sc as u32) < self.q.max_sanctify {
             for c in improvers.iter().copied() {
                 self.sim.hero = c;
                 let (_, child) = self.sim.sanctify(item, seed);

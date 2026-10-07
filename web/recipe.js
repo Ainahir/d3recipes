@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=sanctify-search-1";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=sanctify-search-2";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -138,12 +138,15 @@ export const DEFAULT_PRICES = ["0.75", "1", "5", "25"];
 export const DEFAULT_SWITCH = "1";   // swap cost
 export const DEFAULT_SWAPS = "0";    // hand-overs during the cube steps ("" = no limit)
 export const DEFAULT_CONVERTS = "2"; // Convert Set Item steps per recipe ("" = no limit)
+export const supportsSanctify = (season) => season >= 40 && (season - 40) % 6 === 0;
+export const defaultSanctifyCap = (season) => supportsSanctify(season) ? "2" : "0";
 
 export function requestHash(req, season, hc) {
   const e = encodeURIComponent;
   const w = req.w.map(([s, m]) => e(s) + (m === "" || m == null ? "" : "~" + e(m))).join(",");
   // the swap settings appear in the link only when they differ from the defaults, so older links and saved searches stay the same
-  const sanctify = (req.sa ?? "1") !== "1" || (req.sn ?? "2") !== "2" ? `&sa=${e(req.sa ?? "1")}&sn=${e(req.sn ?? "2")}` : "";
+  const cap = req.sn ?? defaultSanctifyCap(season);
+  const sanctify = (req.sa ?? "1") !== "1" || cap !== "2" ? `&sa=${e(req.sa ?? "1")}&sn=${e(cap)}` : "";
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
   return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}${sanctify}`;
@@ -160,17 +163,19 @@ export function parseRequestHash(hash) {
   if (c === null || i === null) return null;
   const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); return [d(s), d(v)]; });
   const p = (q.get("p") || "").split(",").map(d);
+  const season = Math.max(1, Math.round(num("s") || 40));
+  const defaultCap = defaultSanctifyCap(season);
   return {
     req: {
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
       sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : "1",
-      sn: q.has("sn") ? (q.get("sn") === "" ? "" : /^\d+$/.test(q.get("sn")) ? q.get("sn") : "2") : "2",
+      sn: q.has("sn") ? (q.get("sn") === "" ? "" : /^\d+$/.test(q.get("sn")) ? q.get("sn") : defaultCap) : defaultCap,
       cn: q.has("cn") ? (q.get("cn") === "" ? "" : /^\d+$/.test(q.get("cn")) ? q.get("cn") : DEFAULT_CONVERTS) : DEFAULT_CONVERTS,
       xn: q.has("xn") ? (q.get("xn") === "" ? "" : /^\d+$/.test(q.get("xn")) ? q.get("xn") : DEFAULT_SWAPS) : DEFAULT_SWAPS,
       // a finite cost the engine can take in hundredths (a crafted `xs=Infinity` would reach it as null)
       xs: Number.isFinite(num("xs")) && num("xs") >= 0 && num("xs") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("xs") : DEFAULT_SWITCH,
     },
-    season: Math.max(1, Math.round(num("s") || 40)), hc: q.get("m") === "hc",
+    season, hc: q.get("m") === "hc",
   };
 }
 

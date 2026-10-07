@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-search-1";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=sanctify-search-1";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-search-2";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-search-2";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -150,13 +150,11 @@ function combo(input, box, source, emptyText, onPick) {
 
 // ---------- setup ----------
 
+let sanctifyCapEdited = false;
 function updateSanctifyControls() {
   const season = Math.max(1, Math.round(+$("season").value || 40));
-  const available = season >= 40 && (season - 40) % 6 === 0;
-  $("sanctifyCost").hidden = !available;
-  $("sanctifyLimit").hidden = !available;
-  $("csa").disabled = !available;
-  $("sn").disabled = !available;
+  if (!sanctifyCapEdited) $("sn").value = defaultSanctifyCap(season);
+  $("sanctifyWarning").hidden = supportsSanctify(season) || ($("sn").value.trim() !== "" && +$("sn").value <= 0);
 }
 
 function start() {
@@ -172,6 +170,7 @@ function start() {
   $("go").addEventListener("click", go);
   initActions();
   updateSanctifyControls(); $("season").addEventListener("input", updateSanctifyControls);
+  $("sn").addEventListener("input", () => { sanctifyCapEdited = true; updateSanctifyControls(); });
   renderItemChips();
   loadStems().then(() => onRoute(routeOfHash()));
 }
@@ -286,7 +285,7 @@ function baseQuery(req, item, season, hc) {
     switch: [0, 1, 2, 3, 4, 5, 6].filter((c) => c !== req.c), max_switch: req.xn === "" ? 255 : Math.min(254, +req.xn || 0),
     cost_switch: Math.max(0, Math.round((+req.xs || 0) * 100)),
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
-    max_sanctify: season >= 40 && (season - 40) % 6 === 0 ? ((req.sn ?? "2") === "" ? 255 : Math.min(254, Math.max(0, Math.round(+req.sn || 0)))) : 0,
+    max_sanctify: (req.sn ?? defaultSanctifyCap(season)) === "" ? 255 : Math.min(254, Math.max(0, Math.round(+(req.sn ?? defaultSanctifyCap(season)) || 0))),
     cost_s: cost(req.sa ?? "1"),
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
@@ -423,7 +422,9 @@ async function applyLink(parsed) {
   ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
   $("xn").value = req.xn;
   $("cn").value = req.cn ?? DEFAULT_CONVERTS;
-  $("csa").value = req.sa ?? "1"; $("sn").value = req.sn ?? "2";
+  $("csa").value = req.sa ?? "1"; $("sn").value = req.sn ?? defaultSanctifyCap(season);
+  sanctifyCapEdited = true;
+  updateSanctifyControls();
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);

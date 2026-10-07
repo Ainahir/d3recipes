@@ -27,10 +27,14 @@ fn sanctify_can_prepare_an_ashes_result_and_replay_its_tooltip() {
 }
 
 #[test]
-fn sanctify_is_gated_by_season_and_not_registered_as_an_ashes_endpoint() {
-    for (season,nodes) in [(40,3),(46,3),(52,3),(39,2),(41,2),(45,2)] {
+fn unsupported_seasons_allow_explicit_sanctify_with_a_warning() {
+    for season in [40,46,52,39,41,45] {
         let r = search(serde_json::json!({"season":season,"maxsteps":1,"max_primalize":0}));
-        assert_eq!(r.status.nodes,nodes,"season {season}");
+        assert_eq!(r.status.nodes,3,"season {season}");
+        assert_eq!(r.warnings.is_empty(), season >= 40 && (season-40)%6 == 0);
         assert!(r.full.is_empty());
+        let disabled = search(serde_json::json!({"season":season,"maxsteps":1,"max_primalize":0,"max_sanctify":0}));
+        assert_eq!(disabled.status.nodes,2);
+        assert!(disabled.warnings.is_empty());
     }
 }
