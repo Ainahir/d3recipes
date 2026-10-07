@@ -47,7 +47,16 @@ function cancel(){worker.postMessage({type:'cancel'});job++;active=null;$('cance
 function renderBuild(){
  cancel();
  try{build=JSON.parse(localStorage.getItem(key)||'[]').find(b=>b.id===select.value);$('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';rows=(build?.slots||[]).map((r,i)=>({...r,index:i,owned:false,results:{}}));
- $('rows').innerHTML=rows.map(r=>`<tr><td><input type="checkbox" data-row="${r.index}" style="width:auto" aria-label="Already have ${esc(r.externalName||info?.items.find(it=>it.id===r.item)?.name||r.slot)}"></td><td>${esc(r.slot)}</td><td>${esc(r.any_item?'Any item':r.externalName||info?.items.find(it=>it.id===r.item)?.name||'Unknown item')}</td><td>${(r.wants||[]).map(w=>esc(w.label||statName(w.stem))).join(', ')}</td><td id="build-match-${r.index}">Not searched</td><td id="build-cost-${r.index}">—</td></tr>`).join('');
+ $('rows').replaceChildren(...rows.map(row=>{
+   const tr=document.createElement('tr');
+   const cell=(text,id)=>{const td=document.createElement('td');if(text!==undefined)td.textContent=text;if(id)td.id=id;tr.append(td);return td;};
+   const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
+   const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.row=String(row.index);checkbox.style.width='auto';checkbox.setAttribute('aria-label','Already have '+name);cell().append(checkbox);
+   cell(row.slot);cell(row.any_item?'Any item':row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item');
+   cell((row.wants||[]).map(w=>w.label||statName(w.stem)).join(', '));
+   cell('Not searched','build-match-'+row.index);cell('—','build-cost-'+row.index);
+   return tr;
+ }));
  $('rows').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>{const row=rows[+el.dataset.row];row.owned=el.checked;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Not searched';document.getElementById('build-cost-'+row.index).textContent='—';recommendPrimal();if(active?.row===row){worker.postMessage({type:'cancel'});job++;nextRow();}}));$('run').disabled=!info||!build;
  }catch(e){status.textContent=e.message;}
 }
