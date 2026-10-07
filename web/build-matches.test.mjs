@@ -5,10 +5,13 @@ import vm from 'node:vm';
 const source=await readFile(new URL('./search-builds.js',import.meta.url),'utf8');
 const context=vm.createContext({});
 vm.runInContext(source.slice(source.indexOf('function targetStats('),source.indexOf('function searchItems(')),context);
-test('best candidate prefers match count then cheapest cost regardless of tier',()=>{
+test('build results accept only primals and rank eligible matches by stats then cost',()=>{
   const candidate=(tier,count,cost)=>({tier,hit:{matched:Array(count).fill(0),cost}});
-  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('ancient',2,10)]).tier,'ancient');
-  assert.equal(context.bestCandidate([candidate('primal',1,1),candidate('normal',2,20)]).tier,'normal');
+  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('ancient',2,10),candidate('normal',3,1)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('crafted',3,1)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('primal',2,20),candidate('crafted',1,1)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('normal',2,1),candidate('ancient',2,1),candidate('crafted',2,1)]),undefined);
+  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('primal',2,20)]).hit.cost,20);
 });
 test('imported priorities search first two stats and allow third at Mystic',()=>{
   const row={wants:['A','B','C','D'].map(stem=>({stem,min:null,imported:true}))};

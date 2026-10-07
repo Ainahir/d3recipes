@@ -4,7 +4,7 @@ import {stepsElement,tooltipRows} from './recipe.js?v=build-result-dom-1';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
-const tiers=['primal','crafted','ancient','normal'];
+const tiers=['primal'];
 const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
 const key = 'd3recipes-user-builds-v1';
@@ -84,7 +84,7 @@ function priorityQuery(row){
  const targets=targetStats(row),required=targets.slice(0,2),mystic=targets[2];
  return {wants:required.map(w=>({fam:[w.stem],min:w.min})),min_match:mystic?required.length:Math.min(1,required.length),mystic_finish:true,mystic:mystic?[mystic.stem]:[],keep:mystic?required.map(w=>w.stem):required.slice(0,1).map(w=>w.stem)};
 }
-function bestCandidate(candidates){return candidates.slice().sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
+function bestCandidate(candidates){return candidates.filter(candidate=>candidate.tier==='primal').sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
 function searchItems(row,items){
  const normalize=name=>String(name).replace(/\s*\([^)]*\)\s*$/,'').replace(/^the\s+/i,'').toLowerCase().replace(/[^a-z0-9]/g,'');
  const alternatives=new Set((row.alternatives||[]).map(normalize));
@@ -98,7 +98,7 @@ function nextRow(){
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
  row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);Object.assign(active.query,priorityQuery(row));active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
 }
-function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(4-active.tier))});}
+function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(tiers.length-active.tier))});}
 function showMatches(row){
  const snap=targetStats(row).map(w=>w.stem);let chosen=[];
  for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
@@ -116,7 +116,7 @@ function showMatches(row){
 }
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
- else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;row.limited ||=m.results.status.capped||m.type==='done'&&!m.results.status.done;showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<4)startTier();else nextRow();}}
+ else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;row.limited ||=m.results.status.capped||m.type==='done'&&!m.results.status.done;showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<tiers.length)startTier();else nextRow();}}
  else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});
