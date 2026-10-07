@@ -83,8 +83,8 @@ $('importFile').addEventListener('change',async()=>{
 });
 async function prepareImported(source){
     const build=source;
-    const slotNames={Helm:'Head',Gloves:'Hands',Bracers:'Wrists',Belt:'Waist',Pants:'Legs',Boots:'Feet','Main-Hand':'Main-hand','Off-Hand':'Off-hand'};
-    const skipped=[];const importedSlots=build.slot.flatMap(r=>{if(r.any_item)return [r];const items=(r.items||[]).filter(name=>{if(/\((Cubed|Crafted|[^)]*Bounties[^)]*)\)/i.test(name)){skipped.push(name);return false;}return true;});return items.length?[{...r,items}]:[];});
+    const slotNames={Cloak:'Chest',Helm:'Head',Gloves:'Hands',Bracers:'Wrists',Belt:'Waist',Pants:'Legs',Boots:'Feet','Main-Hand':'Main-hand','Off-Hand':'Off-hand'};
+    const skipped=[];const importedSlots=build.slot.flatMap(r=>{if(r.name==='Potion'){skipped.push('Potion slot');return [];}if(r.any_item)return [r];const items=(r.items||[]).filter(name=>{if(/\((Cubed|Crafted|[^)]*Bounties[^)]*)\)/i.test(name)){skipped.push(name);return false;}return true;});return items.length?[{...r,items}]:[];});
     const rows=importedSlots.map(r=>{const slot=slotNames[r.name]||r.name;if(!slots.includes(slot))throw Error('Unsupported equipment slot: '+r.name);
       const item=info.items.find(it=>normalize(it.name)===normalize((r.items?.[0]||'').replace(/\s*\([^)]*\)\s*$/,''))||normalize(it.name)==='ringofthezodiac'&&normalize(r.items?.[0]||'')==='obsidianringofthezodiac');if(!item&&!r.any_item&&!/\((Crafted|[^)]*Bounties[^)]*)\)/i.test(r.items?.[0]||''))throw Error('Unknown item: '+r.items?.[0]);return{slot,item:item?.id||null,externalName:item?.name||r.items?.[0],any_item:r.any_item,sets:r.sets,notes:r.notes,source:r,wants:[],alternatives:(r.items||[]).slice(1).map(name=>{const alt=info.items.find(it=>normalize(it.name)===normalize(name)||normalize(it.name)==='ringofthezodiac'&&normalize(name)==='obsidianringofthezodiac');return alt?.name||name;})};});
     if(new Set(rows.map(r=>r.slot)).size!==rows.length)throw Error('The file repeats an equipment slot.');
