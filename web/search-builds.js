@@ -32,7 +32,7 @@ function refresh() {
 }
 
 document.getElementById('search-builds-create').addEventListener('click', () => {
-  location.hash = 'create-build';
+  window.dispatchEvent(new CustomEvent('d3-navigate', {detail:'create-build'}));
 });
 window.addEventListener('d3-route', event => {
   if (event.detail === 'search-builds') refresh();

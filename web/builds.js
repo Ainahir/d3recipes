@@ -245,6 +245,7 @@ $("nav").addEventListener("click", (e) => {
   if (b) go(b.dataset.route);
 });
 window.addEventListener("d3-saved", show);
+window.addEventListener("d3-navigate", event => go(event.detail));
 window.addEventListener("popstate", () => { fromHash(); show(); });
 $("hc").addEventListener("change", refresh);
 $("season").addEventListener("input", show);
