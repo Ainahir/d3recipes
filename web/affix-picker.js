@@ -1,4 +1,6 @@
 export function combo(input, box, source, emptyText, onPick) {
+  const controller = new AbortController();
+  const on = (target, type, listener) => target.addEventListener(type, listener, {signal:controller.signal});
   let items = [], active = -1;
   const paint = () => {
     const children = items.map((item, i) => {
@@ -30,9 +32,9 @@ export function combo(input, box, source, emptyText, onPick) {
   const open = () => { items = source(); active = items.length ? 0 : -1; paint(); box.hidden = false; input.setAttribute("aria-expanded", "true"); };
   const close = () => { box.hidden = true; input.setAttribute("aria-expanded", "false"); };
   const pick = (i) => { const x = items[i]; if (!x) return; input.value = ""; close(); onPick(x.value); };
-  input.addEventListener("input", open);
-  input.addEventListener("focus", open);
-  input.addEventListener("keydown", (e) => {
+  on(input, "input", open);
+  on(input, "focus", open);
+  on(input, "keydown", (e) => {
     const down = e.key === "ArrowDown" || e.key === "Down", up = e.key === "ArrowUp" || e.key === "Up";
     if (down || up) {
       e.preventDefault();
@@ -49,16 +51,16 @@ export function combo(input, box, source, emptyText, onPick) {
   // Only a pointer that really moved counts: browsers also fire a phantom mousemove when the list scrolls or redraws under
   // a resting pointer, which must not steal the highlight back from the arrow keys.
   let px = -1, py = -1;
-  box.addEventListener("mousemove", (e) => {
+  on(box, "mousemove", (e) => {
     if (e.clientX === px && e.clientY === py) return;
     px = e.clientX; py = e.clientY;
     const el = e.target.closest("[data-i]");
     if (el && +el.dataset.i !== active) setActive(+el.dataset.i, false);
   });
-  box.addEventListener("mousedown", (e) => {
+  on(box, "mousedown", (e) => {
     const el = e.target.closest("[data-i]");
     if (el) { e.preventDefault(); pick(+el.dataset.i); }
   });
-  document.addEventListener("click", (e) => { if (e.target !== input && !box.contains(e.target)) close(); });
-  return { close };
+  on(document, "click", (e) => { if (e.target !== input && !box.contains(e.target)) close(); });
+  return { close, dispose: () => {controller.abort();close();items=[];} };
 }

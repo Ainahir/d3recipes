@@ -1,6 +1,6 @@
 import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=import-conflicts-1';
 import { parseBuildToml } from './build-toml.js?v=create-build-import-1';
-import { combo } from './affix-picker.js?v=plain-text-1';
+import { combo } from './affix-picker.js?v=dispose-1';
 import { CLASS_NAMES, STATS, statName, HIDDEN } from './stats.js?v=1fc672fd23';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
@@ -8,13 +8,15 @@ const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders
 let workerFailure=null;
 let info,draft={id:null,name:'',class:0,slots:[]},generation=0;
 const pending=new Map();
+const pickers=new Map();
+function disposePicker(i){pickers.get(i)?.dispose();pickers.delete(i);}
 const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
 const notice=text=>{ $('status').textContent=text; if($('importStatus')) $('importStatus').textContent=text; };
 function listSaved(){try{$('saved').replaceChildren(new Option('Choose a saved build',''),...saved().map(b=>new Option(b.name,b.id)));}catch(e){notice(e.message);}}
 function candidates(slot){return info.items.filter(it=>it.classes.includes(draft.class)&&(pools[slot]?pools[slot].includes(it.slot):slot==='Main-hand'?/Sword|Axe|Mace|Dagger|Spear|Bow|Crossbow|HandXbow|Wand|Fist|Daibo|Flail|Scythe|Staff|Polearm|MightyWeapon/.test(it.slot):/Shield|Orb|Mojo|Quiver|Phylactery|Sword$|Axe$|Mace$|Dagger$|Spear$|Wand$|FistWeapon|HandXbow|Scythe1H|Flail1H|MightyWeapon1H/.test(it.slot))).sort((a,b)=>a.name.localeCompare(b.name));}
 function definition(build=draft){const names={Head:'Helm',Hands:'Gloves',Wrists:'Bracers',Waist:'Belt',Legs:'Pants',Feet:'Boots','Main-hand':'Main-Hand','Off-hand':'Off-Hand'};return {name:build.name.trim(),class:info.classes[build.class],slot:build.slots.map(r=>({name:names[r.slot]||r.slot,...(r.any_item?{any_item:true,sets:r.sets??true}:{items:[r.externalName||info.items.find(it=>it.id===r.item).name,...(r.alternatives||[])]}),stat_priority:r.wants.map(w=>w.exportName||statName(w.stem)),...(r.notes?{notes:r.notes}:{})}))};}
 function toml(build=draft){const b=definition(build),q=JSON.stringify;return '[[build]]\nname = '+q(b.name)+'\nclass = '+q(b.class)+'\n'+b.slot.map(r=>'\n[[build.slot]]\nname = '+q(r.name)+'\n'+(r.any_item?'any_item = true\nsets = '+r.sets+'\n':'items = ['+r.items.map(q).join(', ')+']\n')+'stat_priority = ['+r.stat_priority.map(q).join(', ')+']\n'+(r.notes?'notes = ['+r.notes.map(q).join(', ')+']\n':'')).join('');}
-function render(){generation++;$('clone').hidden=!draft.id;$('name').value=draft.name;$('class').value=String(draft.class);$('exportPreview').hidden=true;$('slots').replaceChildren(...slots.map((slot,i)=>{
+function render(){for(const i of pickers.keys())disposePicker(i);generation++;$('clone').hidden=!draft.id;$('name').value=draft.name;$('class').value=String(draft.class);$('exportPreview').hidden=true;$('slots').replaceChildren(...slots.map((slot,i)=>{
   const row=draft.slots.find(r=>r.slot===slot),section=document.createElement('section');section.className='card';
   const heading=document.createElement('h3');heading.textContent=slot;
   const label=document.createElement('label');label.htmlFor='build-item-'+i;label.textContent='Item';
@@ -24,21 +26,21 @@ function render(){generation++;$('clone').hidden=!draft.id;$('name').value=draft
   const affixes=document.createElement('div');affixes.id='build-affixes-'+i;
   section.append(heading,label,select,affixes);return section;
 }));$('slots').querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{const i=+el.dataset.row;draft.slots=draft.slots.filter(r=>r.slot!==slots[i]);if(el.value)draft.slots.push({slot:slots[i],item:+el.value,wants:[]});loadAffixes(i);}));slots.forEach((_,i)=>loadAffixes(i));}
-function loadAffixes(i){const row=draft.slots.find(r=>r.slot===slots[i]),box=$('affixes-'+i);box.replaceChildren();if(!row)return;const item=info.items.find(it=>it.id===row.item);if(!item){affixPicker({i,item:row.item},[]);return;}if(workerFailure){box.textContent=workerFailure;return;}const key=crypto.randomUUID();pending.set(key,{i,generation,item:row.item});box.textContent='Loading affixes...';worker.postMessage({type:'stems',key,class:draft.class,slot:item.slot,item:row.item});}
+function loadAffixes(i){disposePicker(i);const row=draft.slots.find(r=>r.slot===slots[i]),box=$('affixes-'+i);box.replaceChildren();if(!row)return;const item=info.items.find(it=>it.id===row.item);if(!item){affixPicker({i,item:row.item},[]);return;}if(workerFailure){box.textContent=workerFailure;return;}const key=crypto.randomUUID();pending.set(key,{i,generation,item:row.item});box.textContent='Loading affixes...';worker.postMessage({type:'stems',key,class:draft.class,slot:item.slot,item:row.item});}
 function affixPicker(request,stems){const row=draft.slots.find(r=>r.slot===slots[request.i]);if(!row||row.item!==request.item)return;row.wants=row.wants.filter(w=>w.imported||stems.includes(w.stem));const box=$('affixes-'+request.i),inputId='build-statFind-'+request.i,pickId='build-statPick-'+request.i;
 const label=document.createElement('label');label.htmlFor=inputId;label.textContent='Stats you want';
 const chipList=document.createElement('div');chipList.className='chips';
 const statInput=document.createElement('input');statInput.id=inputId;statInput.type='text';statInput.placeholder='Search stats: crit, cooldown, dexterity...';statInput.autocomplete='off';statInput.setAttribute('role','combobox');statInput.setAttribute('aria-expanded','false');statInput.setAttribute('aria-controls',pickId);
 const suggestions=document.createElement('div');suggestions.id=pickId;suggestions.className='pick';suggestions.setAttribute('role','listbox');suggestions.hidden=true;
 const help=document.createElement('p');help.className='small';help.textContent='Leave empty for any roll. Chips are ordered from highest to lowest priority.';
-box.replaceChildren(label,chipList,statInput,suggestions,help);
+disposePicker(request.i);box.replaceChildren(label,chipList,statInput,suggestions,help);
 const chips=()=>{const list=box.querySelector('.chips');list.replaceChildren(...row.wants.map((want,i)=>{
   const chip=document.createElement('div');chip.className='chip';
   const label=document.createElement('span');label.textContent=(i+1)+'. '+(want.label||statName(want.stem))+(stems.includes(want.stem)?'':' (unavailable on this item)');
   const up=document.createElement('button');up.type='button';up.dataset.up=String(i);up.title='Move up in priority';up.setAttribute('aria-label','Move '+statName(want.stem)+' up');up.disabled=i===0;up.textContent='↑';
   const remove=document.createElement('button');remove.type='button';remove.dataset.remove=String(i);remove.title='Remove';remove.setAttribute('aria-label','Remove '+statName(want.stem));remove.textContent='×';
   chip.append(label,up,remove);return chip;
-}));list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.up;[row.wants[i-1],row.wants[i]]=[row.wants[i],row.wants[i-1]];chips();}));list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{row.wants.splice(+b.dataset.remove,1);chips();}));};chips();const input=box.querySelector('input');combo(input,box.querySelector('.pick'),()=>{const text=input.value.trim().toLowerCase();return stems.filter(stem=>!row.wants.some(w=>w.stem===stem)&&(statName(stem).toLowerCase().includes(text)||stem.toLowerCase().includes(text))).slice(0,40).map(stem=>({value:stem,label:statName(stem)}));},'No matching stats.',stem=>{row.wants.push({stem,min:null});chips();});}
+}));list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.up;[row.wants[i-1],row.wants[i]]=[row.wants[i],row.wants[i-1]];chips();}));list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{row.wants.splice(+b.dataset.remove,1);chips();}));};chips();const input=box.querySelector('input');pickers.set(request.i,combo(input,box.querySelector('.pick'),()=>{const text=input.value.trim().toLowerCase();return stems.filter(stem=>!row.wants.some(w=>w.stem===stem)&&(statName(stem).toLowerCase().includes(text)||stem.toLowerCase().includes(text))).slice(0,40).map(stem=>({value:stem,label:statName(stem)}));},'No matching stats.',stem=>{row.wants.push({stem,min:null});chips();}));}
 worker.onmessage=({data:m})=>{if(m.type==='ready'){info=m.info;$('class').replaceChildren(...info.classes.map((c,i)=>new Option(CLASS_NAMES[c]||c,String(i))));$('editor').hidden=false;$('loading').hidden=true;render();listSaved();}else if(m.type==='stems'){const r=pending.get(m.key);pending.delete(m.key);if(r?.resolve){r.resolve(m.stems);return;}if(r&&r.generation===generation)affixPicker(r,Object.keys(m.stems).filter(s=>!HIDDEN.test(s)).sort((a,b)=>statName(a).localeCompare(statName(b))));}else if(m.type==='error')failRequests(m.message,m.key);};
 $('name').addEventListener('input',()=>draft.name=$('name').value);
 $('class').addEventListener('change',()=>{draft.class=+$('class').value;draft.slots=draft.slots.filter(r=>!r.item||candidates(r.slot).some(it=>it.id===r.item));render();notice('Class changed. Items unavailable to this class were removed.');});
