@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=1fc672fd23";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=b96cf97bf0";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -136,8 +136,8 @@ export function tooltipRows(lines) {
 // mode always gives the same recipes, so a link (or a saved entry) only has to carry the request.
 export const DEFAULT_PRICES = ["0.75", "1", "5", "25"];
 export const DEFAULT_SWITCH = "1";   // swap cost
-export const DEFAULT_SWAPS = "0";    // hand-overs during the cube steps ("" = no limit)
-export const DEFAULT_CONVERTS = "2"; // Convert Set Item steps per recipe ("" = no limit)
+export const DEFAULT_SWAPS = "4";    // hand-overs during the cube steps ("" = no limit)
+export const DEFAULT_CONVERTS = "4"; // Convert Set Item steps per recipe ("" = no limit)
 
 export function requestHash(req, season, hc) {
   const e = encodeURIComponent;
