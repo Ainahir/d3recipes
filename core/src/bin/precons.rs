@@ -4,7 +4,7 @@
 //! stats per row) and writes the page's `premade_*.json`.
 //!
 //!     precons --resolved rows.json --out web/premade_sc.json [--hc] [--carry old.json] [--prices H,R,C,P] [--node-cap N]
-//!             [--max-convert N] [--max-improve N] [--threads N] [--data web/data.json] [--no-mystic-check]
+//!             [--max-convert N] [--max-switch N] [--cost-switch N] [--no-craft-any] [--max-improve N] [--threads N] [--data web/data.json] [--no-mystic-check]
 //!
 //! A recipe ends on a natural primal carrying the row's required stats (a row naming exactly two stats and no third may carry one of
 //! them), and the Mystic must be able to add the row's Mystic stat (or the missing one of the two) by replacing a line ranked below it
@@ -41,12 +41,15 @@ struct Opts {
     prices: [u64; 4],
     node_cap: usize,
     max_convert: u32,
+    /// hero hand-overs allowed per route during the cube steps (255 = unlimited) and what one costs, in price units
+    max_switch: u32,
+    /// an item that several classes can make may be crafted by any of them; crafting as another class than the row's uses one swap
+    craft_any: bool,
+    cost_switch: u64,
     max_improve: u32,
     threads: usize,
     /// off: no Mystic rule (to compare with the old generator, which had none)
     mystic_check: bool,
-    /// nodes for the search that keeps the Mystic step possible, before the row falls back to no Mystic step
-    mystic_budget: usize,
     staples: Option<String>,
     salvage: bool,
 }
@@ -61,12 +64,14 @@ fn opts() -> Opts {
         carry: None,
         hc: false,
         prices: [100, 500, 75, 2500],
-        node_cap: 12_000_000,
+        node_cap: 20_000_000,
         max_convert: 255,
+        max_switch: 5,
+        craft_any: true,
+        cost_switch: 100,
         max_improve: 255,
         threads: std::thread::available_parallelism().map_or(4, |n| n.get()),
         mystic_check: true,
-        mystic_budget: 8_000_000,
         staples: None,
         salvage: false,
     };
@@ -77,6 +82,11 @@ fn opts() -> Opts {
         match args[i].as_str() {
             "--hc" => {
                 o.hc = true;
+                i += 1;
+                continue;
+            }
+            "--no-craft-any" => {
+                o.craft_any = false;
                 i += 1;
                 continue;
             }
@@ -106,9 +116,10 @@ fn opts() -> Opts {
             }
             "--node-cap" => o.node_cap = val().parse().unwrap(),
             "--max-convert" => o.max_convert = val().parse().unwrap(),
+            "--max-switch" => o.max_switch = val().parse().unwrap(),
+            "--cost-switch" => o.cost_switch = val().parse().unwrap(),
             "--max-improve" => o.max_improve = val().parse().unwrap(),
             "--threads" => o.threads = val().parse().unwrap(),
-            "--mystic-budget" => o.mystic_budget = val().parse().unwrap(),
             "--staples" => o.staples = Some(val()),
             a => panic!("unknown argument {a}"),
         }
@@ -165,10 +176,10 @@ fn task_of(row: &Value) -> Option<Task> {
 fn query(t: &Task, o: &Opts, mystic: bool) -> Query {
     let min_match = if mystic { t.min_match } else { t.required.len() };
     // the smaller Mystic budget only where the Mystic has something to do (a row without a Mystic step gets the full budget)
-    let node_cap = if mystic && (t.mystic.is_some() || t.min_match < t.required.len()) { o.mystic_budget.min(o.node_cap) } else { o.node_cap };
     serde_json::from_value(json!({
         "class": t.class, "slots": [t.slot], "items": t.items, "set_roots": true, "season": 40, "hardcore": o.hc, "eligible": true,
-        "maxsteps": 100000, "max_primalize": o.max_improve, "max_convert": o.max_convert, "node_cap": node_cap,
+        "maxsteps": 100000, "max_primalize": o.max_improve, "max_convert": o.max_convert, "node_cap": o.node_cap, "fallback": mystic,
+        "switch": (0..CLASSES.len()).filter(|&c| c != t.class).collect::<Vec<_>>(), "max_switch": o.max_switch, "cost_switch": o.cost_switch, "craft_any": o.craft_any,
         "cost_h": o.prices[0], "cost_r": o.prices[1], "cost_c": o.prices[2], "cost_p": o.prices[3],
         "quality": "primal", "end_on_primalize": false, "top": 1, "trail": true,
         "wants": t.required.iter().map(|s| json!({"fam": [s]})).collect::<Vec<_>>(), "min_match": min_match,
@@ -209,7 +220,7 @@ fn good_enough(cp: &Checkpoint, required: &[String]) -> bool {
 
 /// The row as the page reads it (see the old export_premade.py: `cost` = steps, `w` = weighted cost).
 /// `moved`: no recipe rolls every required stat, so the Mystic adds this one (the lowest-ranked required stat) instead.
-fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, moved: Option<&String>) -> Value {
+fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, moved: Option<&String>, capped: bool) -> Value {
     let mut need: Vec<(i64, String)> = row["required_stats"]
         .as_array()
         .into_iter()
@@ -232,6 +243,10 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, m
         o["found"] = json!(false);
         return o;
     };
+    if capped {
+        // the search stopped on its node budget: this is the cheapest recipe found, not proven the cheapest
+        o["capped"] = json!(true);
+    }
     let last = h.trail.last().unwrap();
     let moved_task;
     let t = match moved {
@@ -261,6 +276,10 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, m
     need.sort_by_key(|n| n.0);
     let path: String = h.route.iter().map(|&(op, n)| op.to_string().repeat(n as usize)).collect();
     let lin: Vec<Value> = h.trail.iter().map(marker).collect();
+    // the hero (class index) doing each step of `path`, only when the route hands the item over at all
+    let who: Vec<usize> = h.route.iter().zip(&h.route_class).flat_map(|(&(_, n), &c)| std::iter::repeat(c).take(n as usize)).collect();
+    let holder = who.last().copied().unwrap_or(h.craft_class);
+    let handed = h.craft_class != t.class || who.iter().any(|&c| c != t.class) || (mystic.is_some() && h.mystic_class != holder);
     o["need"] = json!(need.iter().map(|n| &n.1).collect::<Vec<_>>());
     o["mystic"] = json!(mystic);
     if row["any_item"] == true {
@@ -272,7 +291,7 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, m
             cp.name == h.name && cp.quality == want && t.required.iter().all(|s| cp.lines.iter().any(|l| &l.stem == s)) && good_enough(cp, &t.required)
         });
         if let Some(k) = at {
-            cheap.push(json!({"q": want, "steps": h.hope as usize + k, "path": &path[..k], "lin": &lin[..=k], "tt": tt(&h.trail[k])}));
+            cheap.push(json!({"q": want, "steps": h.hope as usize + k, "path": &path[..k], "who": if handed { json!(&who[..k]) } else { Value::Null }, "lin": &lin[..=k], "tt": tt(&h.trail[k])}));
         }
     }
     o["found"] = json!(true);
@@ -281,6 +300,12 @@ fn row_out(row: &Value, task: Option<&Task>, hit: Option<&Hit>, dropped: bool, m
     o["n"] = json!(h.hope);
     o["rs"] = json!(h.slot);
     o["path"] = json!(path);
+    if handed {
+        o["who"] = json!(who);
+        o["by"] = json!(t.class);
+        o["craft"] = json!(h.craft_class);
+        o["mystic_by"] = json!(h.mystic_class);
+    }
     o["q"] = json!(h.quality);
     o["seed"] = json!(format!("{:08x}", h.seed));
     o["tt"] = tt(last);
@@ -320,6 +345,8 @@ fn simple_query(class: usize, slot: &str, items: &[u32], required: &[String], an
     serde_json::from_value(json!({
         "class": class, "slots": [slot], "items": items, "set_roots": true, "season": 40, "hardcore": o.hc, "eligible": true,
         "maxsteps": 100000, "max_primalize": 0, "max_convert": o.max_convert, "node_cap": o.node_cap.min(3_000_000),
+        // cube steps may be handed to other heroes; no `craft_any`, since every creating class is searched anyway and the cheapest kept
+        "switch": (0..CLASSES.len()).filter(|&c| c != class).collect::<Vec<_>>(), "max_switch": o.max_switch, "cost_switch": o.cost_switch,
         "cost_h": o.prices[0], "cost_r": o.prices[1], "cost_c": o.prices[2], "cost_p": o.prices[3],
         "quality": if ancient { "ancient+" } else { "primal" }, "min_frac": if ancient { GOOD_ENOUGH } else { 0.0 }, "top": 1, "trail": true,
         "wants": required.iter().map(|s| json!({"fam": [s]})).collect::<Vec<_>>(), "min_match": required.len()
@@ -333,8 +360,8 @@ fn simple_row(slot: &str, item: &str, required: &[String], hit: &Hit) -> Value {
         "slot": slot, "item": item, "cubed_tag": false, "alternate": 0, "alternates_in_row": 1, "forced_stats": [], "mystic_stat": null,
         "required_stats": required.iter().enumerate().map(|(i, s)| json!({"stem": s, "pos": i})).collect::<Vec<_>>()
     });
-    let t = Task { class: 0, slot: slot.to_string(), items: vec![], required: required.to_vec(), min_match: required.len(), mystic: None, keep: vec![] };
-    let mut o = row_out(&row, Some(&t), Some(hit), false, None);
+    let t = Task { class: hit.craft_class, slot: slot.to_string(), items: vec![], required: required.to_vec(), min_match: required.len(), mystic: None, keep: vec![] };
+    let mut o = row_out(&row, Some(&t), Some(hit), false, None, false);
     if let Some(m) = o.as_object_mut() {
         m.remove("cheap");
     }
@@ -399,11 +426,15 @@ fn main() {
                     let t = &tasks[i];
                     let mut r = run_query(d.clone(), query(t, &o, o.mystic_check), 200_000);
                     let mut nodes = r.status.nodes;
+                    // which search stopped on the node budget: the main one, or the one that moves the lowest-ranked stat to the Mystic
+                    let mut capped_in: Vec<&str> = if r.status.capped { vec!["main search"] } else { vec![] };
                     let mut dropped = false;
-                    // nothing leaves room for the Mystic step: the cheapest recipe with every wanted stat, no Mystic step
+                    // nothing leaves room for the Mystic step: the cheapest recipe with every wanted stat and no Mystic step, which the same
+                    // search met on the way (`Query::fallback`), so the whole budget went to the search for a recipe the Mystic can finish
                     if r.full.is_empty() && o.mystic_check && (t.mystic.is_some() || t.min_match < t.required.len()) {
-                        r = run_query(d.clone(), query(t, &o, false), 200_000);
-                        nodes += r.status.nodes;
+                        if let Some(fb) = r.fallback.take() {
+                            r.full = vec![fb];
+                        }
                         dropped = true;
                     }
                     // no recipe rolls every required stat (e.g. the item's only free primary is taken by the forced socket): the Mystic adds
@@ -414,21 +445,26 @@ fn main() {
                         let t2 = Task { required: t.required[..t.required.len() - 1].to_vec(), min_match: t.required.len() - 1, mystic: Some(m.clone()), ..t.clone() };
                         r = run_query(d.clone(), query(&t2, &o, true), 200_000);
                         nodes += r.status.nodes;
+                        if r.status.capped {
+                            capped_in.push("search moving a stat to the Mystic");
+                        }
                         if !r.full.is_empty() {
                             (moved, dropped) = (Some(m), false);
                         }
                     }
+                    let capped = !capped_in.is_empty();
                     let hit = r.full.into_iter().next();
                     eprintln!(
-                        "  [{i}] {} {:?}: {}{} ({} nodes, {:.1}s)",
+                        "  [{i}] {} {:?}: {}{}{} ({} nodes, {:.1}s)",
                         CLASSES[t.class],
                         t.required,
                         hit.as_ref().map_or("NOT FOUND".to_string(), |h| format!("{} cost {}", h.name, h.cost)),
                         if dropped { " (no Mystic step)".to_string() } else if let Some(m) = &moved { format!(" (the Mystic adds {m})") } else { String::new() },
+                        if capped { format!(" [HIT NODE BUDGET in the {}: not proven cheapest]", capped_in.join(" and the ")) } else { String::new() },
                         nodes,
                         t1.elapsed().as_secs_f64()
                     );
-                    results.lock().unwrap().insert(i, (hit, nodes, r.status.capped, dropped, moved));
+                    results.lock().unwrap().insert(i, (hit, nodes, capped, dropped, moved));
                 }
             });
         }
@@ -452,10 +488,19 @@ fn main() {
             let hit = res.and_then(|x| x.0.as_ref());
             rows += 1;
             found += hit.is_some() as usize;
-            out_rows.push(row_out(r, task.as_ref(), hit, res.map_or(false, |x| x.3), res.and_then(|x| x.4.as_ref())));
+            out_rows.push(row_out(r, task.as_ref(), hit, res.map_or(false, |x| x.3), res.and_then(|x| x.4.as_ref()), res.map_or(false, |x| x.2)));
         }
         builds.push(json!({"id": slug(b["title"].as_str().unwrap()), "title": b["title"], "class": b["class"], "rows": out_rows}));
     }
+    // staple and salvage searches (one per class each) that stopped on the node budget
+    let simple_capped = AtomicUsize::new(0);
+    let simple_run = |d: &Rc<Data>, q: Query| {
+        let r = run_query(d.clone(), q, 200_000);
+        if r.status.capped {
+            simple_capped.fetch_add(1, Ordering::SeqCst);
+        }
+        r.full.into_iter().next()
+    };
     // staples: each definition on every class, the cheapest class wins (ties: class name)
     let staples = match &o.staples {
         None => carry.get("staples").cloned().unwrap_or(json!([])),
@@ -467,7 +512,7 @@ fn main() {
                 let st = &defs[k];
                 let req = stems(&st["required_stats"]);
                 let q = simple_query(c, st["hero_slot"].as_str().unwrap(), &[hex(st["item_id"].as_str().unwrap())], &req, st["want"] == "ancient", &o);
-                run_query(d.clone(), q, 200_000).full.into_iter().next()
+                simple_run(d, q)
             });
             let mut out = Vec::new();
             for (k, st) in defs.iter().enumerate() {
@@ -491,7 +536,7 @@ fn main() {
             if d.slots[k].pools[c].is_empty() {
                 return None;
             }
-            run_query(d.clone(), simple_query(c, &slots[k], &[], &[], false, &o), 200_000).full.into_iter().next()
+            simple_run(d, simple_query(c, &slots[k], &[], &[], false, &o))
         });
         let mut out: Vec<(u64, String, Value)> = Vec::new();
         for (k, slot) in slots.iter().enumerate() {
@@ -509,5 +554,11 @@ fn main() {
     let capped = results.values().filter(|r| r.2).count();
     let dropped = results.values().filter(|r| r.3).count();
     let nodes: u64 = results.values().map(|r| r.1).sum();
-    eprintln!("wrote {}: {found}/{rows} rows found, {dropped} searches without a Mystic step, {capped} searches hit the node budget, {nodes} nodes, {:.1}s", o.out, t0.elapsed().as_secs_f64());
+    eprintln!(
+        "wrote {}: {found}/{rows} rows found, {dropped} searches without a Mystic step, {capped} row searches hit the node budget (marked \"capped\" in the output), \
+         {} staple/salvage searches hit it, {nodes} nodes, {:.1}s",
+        o.out,
+        simple_capped.load(Ordering::SeqCst),
+        t0.elapsed().as_secs_f64()
+    );
 }
