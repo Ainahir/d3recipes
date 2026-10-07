@@ -66,6 +66,10 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 ## Changelog
 
+**2026-10-07**
+
+- Fixed custom search not offering a Stone of Jordan's maximum-resource line (Maximum Discipline for a Demon Hunter, Fury for a Barbarian, and so on) under "Stats you want", although the ring rolls it. The list now includes what the game's last fixed-slot pass can pick. Thanks to Ainahir for finding it and tracing the cause (#12).
+
 **2026-10-06**
 
 - Fixed custom search showing recipes for the wrong item: for a set item, a Convert Set Item step could end the route on another piece of the set (a search for a chest could return shoulders), and the recipe was listed as if it made the item asked for. Every recipe now ends on the item you searched for. Thanks to Stroold and Rwede on Discord for documenting the bug.

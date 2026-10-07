@@ -494,6 +494,17 @@ impl Sim {
                         out.push(ai);
                     }
                 }
+                // resolve_slot's last pass ignores the item type, but only when no member fits it (a Stone of Jordan's
+                // maximum-resource slot holds only affixes typed for other items), so the class's members join then.
+                if !members.iter().any(|&ai| self.eligible_base(item, ai, true, true, true) && d.affixes[ai].tier <= self.ilvl) {
+                    let last: Vec<usize> = members.iter().copied().filter(|&ai| {
+                        let a = &d.affixes[ai];
+                        (a.g7c == gid || a.g80 == gid) && a.tier <= self.ilvl && !(a.cls != U && a.cls as usize != self.cls) && a.weight[self.cls] >= 1
+                    }).collect();
+                    // only the highest tier is ever taken (a Mana jewel's line is tier 1)
+                    let top = last.iter().map(|&ai| d.affixes[ai].tier).max();
+                    out.extend(last.into_iter().filter(|&ai| Some(d.affixes[ai].tier) == top));
+                }
             }
         }
         out.sort_unstable();
