@@ -51,8 +51,8 @@ function renderBuild(){
    const cell=(text,id)=>{const td=document.createElement('td');if(text!==undefined)td.textContent=text;if(id)td.id=id;tr.append(td);return td;};
    const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.row=String(row.index);checkbox.style.width='auto';checkbox.setAttribute('aria-label','Already have '+name);cell().append(checkbox);
-   cell(row.slot);cell(row.any_item?'Any item':row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item');
-   cell((row.wants||[]).map(w=>w.label||statName(w.stem)).join(', '));
+   cell(row.slot);cell(row.any_item?'Any item':[row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item',...(row.alternatives||[])].join(' or '));
+   const statsCell=cell(targetStats(row).map((w,i)=>(w.label||statName(w.stem))+(row.wants.some(w=>w.imported)&&i===2?' (Mystic)':'')).join(', '));if(row.wants.some(w=>w.imported))statsCell.title='Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export.';
    cell('Not searched','build-match-'+row.index);cell('—','build-cost-'+row.index);
    return tr;
  }));
@@ -78,19 +78,31 @@ $('run').addEventListener('click',()=>{
  active={queue:rows.filter(r=>!r.owned),settings:{c:build.class,p:['cc','ch','cr','cp'].map(id=>$(id).value),f:number('floor'),n:Math.max(1,number('top')),xn:$('xn').value,xs:$('cs').value,cn:$('cn').value},secs:Math.max(1,number('secs')),season:Math.max(1,+document.getElementById('season').value||40),hc:document.getElementById('hc').value==='1'};
  $('run').disabled=true;$('cancel').hidden=false;nextRow();
 });
+function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}
+function priorityQuery(row){
+ if(!row.wants.some(w=>w.imported))return {};
+ const targets=targetStats(row),required=targets.slice(0,2),mystic=targets[2];
+ return {wants:required.map(w=>({fam:[w.stem],min:w.min})),min_match:mystic?required.length:Math.min(1,required.length),mystic_finish:true,mystic:mystic?[mystic.stem]:[],keep:mystic?required.map(w=>w.stem):required.slice(0,1).map(w=>w.stem)};
+}
+function bestCandidate(candidates){return candidates.slice().sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
+function searchItems(row,items){
+ const normalize=name=>String(name).replace(/\s*\([^)]*\)\s*$/,'').replace(/^the\s+/i,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const alternatives=new Set((row.alternatives||[]).map(normalize));
+ return items.filter(item=>item.id===row.item||alternatives.has(normalize(item.name)));
+}
 function nextRow(){
  let row=active.queue.shift();while(row?.owned)row=active.queue.shift();
  if(!row){cancel();status.textContent='Build search complete. Costs use the selected weights.';recommendPrimal();return;}
  active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;
- const item=info.items.find(it=>it.id===row.item);
+ const items=searchItems(row,info.items),item=items[0];
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
- row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);startTier();
+ row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);Object.assign(active.query,priorityQuery(row));active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
 }
 function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(4-active.tier))});}
 function showMatches(row){
- const snap=row.wants.map(w=>w.stem);let chosen=[];
- for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){if(chosen.some(x=>x.hit.matched.length>=hit.matched.length&&x.hit.cost<=hit.cost))continue;chosen.push({tier,hit});}}
- const best=chosen[0];row.best=best;
+ const snap=targetStats(row).map(w=>w.stem);let chosen=[];
+ for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
+ const best=bestCandidate(chosen);row.best=best;if(best)row.itemData=info.items.find(item=>item.name===best.hit.name)||row.itemData;
  const cell=document.getElementById('build-match-'+row.index);cell.replaceChildren();
  if(best){
    const quality=document.createElement('strong');quality.textContent=best.tier==='crafted'?'Crafted primal':best.tier;
@@ -98,7 +110,7 @@ function showMatches(row){
    const steps=stepsElement(best.hit,snap.filter((_,i)=>!best.hit.matched.includes(i)),new Set(snap),{cls:build.class,name:c=>CLASS_NAMES[info.classes[c]]||info.classes[c]});
    const lines=document.createElement('div');lines.className='lines';
    for(const row of tooltipRows(best.hit.lines)){const label=document.createElement('span'),value=document.createElement('span');label.textContent=row.label;value.textContent=row.value;lines.append(label,value);}
-   details.append(summary,steps,lines);cell.append(quality,' · '+best.hit.matched.length+'/'+snap.length+' stats'+(row.limited?' · Best found within limits':''),details);
+   details.append(summary,steps,lines);cell.append(quality,(row.alternatives?.length?' · '+best.hit.name:''),' · '+best.hit.matched.length+'/'+snap.length+' stats'+(row.limited?' · Best found within limits':''),details);
  }else cell.textContent='No matching recipe found'+(row.limited?' within limits':'');
  document.getElementById('build-cost-'+row.index).textContent=best?(best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2}):'—';
 }
