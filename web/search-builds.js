@@ -4,7 +4,7 @@ import {stepsHtml,tooltipRows} from './recipe.js?v=1fc672fd23';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
-const worker=new Worker('./worker.js?v=1fc672fd23',{type:'module'});
+const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
 const tiers=['primal','crafted','ancient','normal'];
 const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
@@ -72,7 +72,7 @@ function showMatches(row){
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
  else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;row.limited ||=m.results.status.capped||m.type==='done'&&!m.results.status.done;showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<4)startTier();else nextRow();}}
- else if(m.type==='error'){if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
+ else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});
 for(const el of document.querySelectorAll('#search-builds-costs input, #season, #hc'))el.addEventListener('change',()=>{if(active)cancel();$('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';for(const row of rows){row.best=null;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Settings changed — search again';document.getElementById('build-cost-'+row.index).textContent='—';}});
@@ -100,3 +100,10 @@ function recommendPrimal(){
   }
 
 }
+
+function engineFailed(message){
+  if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+message;cancel();}
+  info=null;$('run').disabled=true;status.textContent='Search engine unavailable: '+message+'. Reload the page to retry.';
+}
+worker.addEventListener('error',event=>{event.preventDefault();engineFailed(event.message||'Worker crashed');});
+worker.addEventListener('messageerror',()=>engineFailed('Could not read the worker response'));

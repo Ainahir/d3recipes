@@ -30,6 +30,7 @@ function search(id, query, budgetMs) {
   const t0 = performance.now();
   let lastPost = 0;
   const slice = () => {
+    try {
     if (id !== job) { handle.free(); return; }          // cancelled or superseded
     const done = handle.run(20000);
     const now = performance.now();
@@ -43,6 +44,10 @@ function search(id, query, budgetMs) {
     }
     if (done || timeUp) { handle.free(); return; }
     setTimeout(slice, 0);
+    } catch (e) {
+      try { handle.free(); } catch {}
+      postMessage({ type: "error", id, message: String(e) });
+    }
   };
   setTimeout(slice, 0);
 }
@@ -51,7 +56,10 @@ onmessage = (e) => {
   const m = e.data;
   if (m.type === "search") { job = m.id; search(m.id, m.query, m.budgetMs); }
   else if (m.type === "cancel") { job = -1; }
-  else if (m.type === "stems") { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)) }); }
+  else if (m.type === "stems") {
+    try { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)) }); }
+    catch (e) { postMessage({ type: "error", key: m.key, message: String(e) }); }
+  }
 };
 
 boot().catch((e) => postMessage({ type: "error", message: "Could not start: " + e }));
