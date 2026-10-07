@@ -1,10 +1,19 @@
 export function combo(input, box, source, emptyText, onPick) {
   let items = [], active = -1;
   const paint = () => {
-    box.innerHTML = items.length
-      ? items.map((x, i) => `<div role="option" data-i="${i}">${x.html}</div>`).join("") +
-        `<div class="keys" aria-hidden="true"><kbd>&uarr;</kbd><kbd>&darr;</kbd> move <kbd>&crarr;</kbd> select <kbd>esc</kbd> close</div>`
-      : `<div class="empty">${emptyText}</div>`;
+    const children = items.map((item, i) => {
+      const option = document.createElement('div');
+      option.setAttribute('role', 'option');option.dataset.i = String(i);option.textContent = item.label;
+      return option;
+    });
+    const footer = document.createElement('div');
+    if (items.length) {
+      footer.className = 'keys';footer.setAttribute('aria-hidden', 'true');
+      for (const [key, text] of [['↑',''],['↓',' move '],['↵',' select '],['esc',' close']]) {
+        const kbd = document.createElement('kbd');kbd.textContent = key;footer.append(kbd, text);
+      }
+    } else {footer.className = 'empty';footer.textContent = emptyText;}
+    box.replaceChildren(...children, footer);
     setActive(active, false);
   };
   // One highlight only: the keyboard and the mouse pointer move the same marker (a resting pointer must not
