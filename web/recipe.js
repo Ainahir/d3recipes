@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=1fc672fd23";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=sanctify-search-1";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -36,7 +36,7 @@ export function matsHtml(m) {
   const out = [];
   const grouped = new Set();
   // Always the same order: Death's Breath, the three crafting grades, the five legendary materials, Forgotten Souls, Primordial Ashes.
-  const ORDER = ["Death's Breath", ...MATERIAL_GROUPS[0].names, ...MATERIAL_GROUPS[1].names, "Forgotten Soul", "Primordial Ashes"];
+  const ORDER = ["Death's Breath", ...MATERIAL_GROUPS[0].names, ...MATERIAL_GROUPS[1].names, "Forgotten Soul", "Primordial Ashes", "Angelic Crucible"];
   const rank = (n) => (ORDER.includes(n) ? ORDER.indexOf(n) : ORDER.length);
   for (const [name, qty] of Object.entries(m).sort((a, b) => rank(a[0]) - rank(b[0]))) {
     if (grouped.has(name)) continue;
@@ -50,7 +50,7 @@ export function matsHtml(m) {
   return out.join("");
 }
 
-const OP_TEXT = { R: (n) => `Reforge &times;${n}`, P: (n) => `Improve with ashes &times;${n}`, C: (n) => `Convert &times;${n}` };
+const OP_TEXT = { S: (n) => `Sanctify &times;${n}`, R: (n) => `Reforge &times;${n}`, P: (n) => `Improve with ashes &times;${n}`, C: (n) => `Convert &times;${n}` };
 
 const MAIN = new Set(["Str", "Dex", "Int", "StrDex", "StrInt", "StrVit", "DexInt", "DexVit", "IntVit"]);
 
@@ -143,9 +143,10 @@ export function requestHash(req, season, hc) {
   const e = encodeURIComponent;
   const w = req.w.map(([s, m]) => e(s) + (m === "" || m == null ? "" : "~" + e(m))).join(",");
   // the swap settings appear in the link only when they differ from the defaults, so older links and saved searches stay the same
+  const sanctify = (req.sa ?? "1") !== "1" || (req.sn ?? "2") !== "2" ? `&sa=${e(req.sa ?? "1")}&sn=${e(req.sn ?? "2")}` : "";
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
-  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}`;
+  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}${sanctify}`;
 }
 
 // -> {req, season, hc} or null when the fragment is not a request link
@@ -162,6 +163,8 @@ export function parseRequestHash(hash) {
   return {
     req: {
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
+      sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : "1",
+      sn: q.has("sn") ? (q.get("sn") === "" ? "" : /^\d+$/.test(q.get("sn")) ? q.get("sn") : "2") : "2",
       cn: q.has("cn") ? (q.get("cn") === "" ? "" : /^\d+$/.test(q.get("cn")) ? q.get("cn") : DEFAULT_CONVERTS) : DEFAULT_CONVERTS,
       xn: q.has("xn") ? (q.get("xn") === "" ? "" : /^\d+$/.test(q.get("xn")) ? q.get("xn") : DEFAULT_SWAPS) : DEFAULT_SWAPS,
       // a finite cost the engine can take in hundredths (a crafted `xs=Infinity` would reach it as null)
@@ -173,7 +176,8 @@ export function parseRequestHash(hash) {
 
 export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}` +
   ((req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `/${req.xn ?? DEFAULT_SWAPS}~${req.xs ?? DEFAULT_SWITCH}` : "") +
-  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "");
+  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "") +
+  ((req.sa ?? "1") !== "1" || (req.sn ?? "2") !== "2" ? `/s${req.sa ?? "1"}/${req.sn ?? "2"}` : "");
 
 const SAVED_KEY = "d3r-saved";
 export function savedList() {

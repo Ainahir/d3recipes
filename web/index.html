@@ -269,6 +269,7 @@
           <div><label for="cc">Convert Set Item</label><input id="cc" type="number" min="0.01" step="any" value="0.75"></div>
           <div><label for="ch">Hope of Cain</label><input id="ch" type="number" min="0.01" step="any" value="1"></div>
           <div><label for="cr">Reforge</label><input id="cr" type="number" min="0.01" step="any" value="5"></div>
+          <div id="sanctifyCost" hidden><label for="csa">Sanctification</label><input id="csa" type="number" min="0.01" step="any" value="1"></div>
           <div><label for="cp">Improve Legendary</label><input id="cp" type="number" min="0.01" step="any" value="25"></div>
           <div><label for="cs" title="Relative cost of handing the item to a hero of another class (a throwaway level 1 will do), in the same units as the costs before it. Higher means fewer swaps.">Hero swap</label><input id="cs" type="number" min="0" step="any" value="1"></div>
         </div>
@@ -279,6 +280,7 @@
         </div>
         <p class="small" style="margin:10px 0 0">How far the search may branch. Converts and hero swaps cost little, so each one more can find cheaper recipes but makes the search much slower. Leave a box empty for no limit. A hero swap hands the item to another class for a cube step: the item keeps its seed and the hero's class changes what it rolls. The item is always created by the class chosen above, and the Mystic may be any class.</p>
         <div class="opts">
+          <div id="sanctifyLimit" hidden><label for="sn">Most Sanctifications</label><input id="sn" type="number" min="0" step="1" value="2" placeholder="no limit"></div>
           <div><label for="cn" title="Most Convert Set Item steps in one recipe. Leave empty for no limit.">Most converts</label><input id="cn" type="number" min="0" step="1" value="2" placeholder="no limit"></div>
           <div><label for="xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Most hero swaps</label><input id="xn" type="number" min="0" step="1" value="0" placeholder="no limit"></div>
         </div>
@@ -304,7 +306,7 @@
 
 </div>
 <script defer src="analytics.js"></script>
-<script type="module" src="builds.js?v=1fc672fd23"></script>
-<script type="module" src="app.js?v=1fc672fd23"></script>
+<script type="module" src="builds.js?v=sanctify-search-1"></script>
+<script type="module" src="app.js?v=sanctify-search-1"></script>
 </body>
 </html>

@@ -81,6 +81,7 @@ export const RECIPES = {
   H: { "Death's Breath": 25, "Reusable Parts": 50, "Arcane Dust": 50, "Veiled Crystal": 50 },
   R: { "Khanduran Rune": 5, "Caldeum Nightshade": 5, "Arreat War Tapestry": 5, "Corrupted Angel Flesh": 5, "Westmarch Holy Water": 5, "Forgotten Soul": 50 },
   P: { "Primordial Ashes": 100 },
+  S: { "Angelic Crucible": 1 },
   C: { "Forgotten Soul": 10, "Death's Breath": 10 },
 };
 

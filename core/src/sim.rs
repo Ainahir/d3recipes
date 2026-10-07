@@ -603,6 +603,31 @@ impl Sim {
         (existing, rng.lo())
     }
 
+    /// Experimental Sanctify: the ashes affix roll, saving the seed one RNG draw earlier.
+    /// Does not model the Sanctify power or which secondary affix it replaces.
+    pub fn sanctify(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
+        let d = self.d.clone();
+        let item = &d.items[item_idx];
+        self.set_class(item);
+        // on weapons no socket is ever offered, and an unresolved fixed slot (the socket group) is replaced by one primary pick made first
+        self.ban_sockets = item.weapon;
+        let mut rng = Rng::new(seed);
+        let mut existing = Vec::with_capacity(6);
+        let unresolved = self.fixed_slots(item, &mut rng, 2, &mut existing);
+        rng.draw(); // one extra draw before the picks
+        let lead = if item.weapon { unresolved } else { 0 };
+        self.force_socket = item.worn;
+        self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
+        self.force_socket = false;
+        self.ban_sockets = false;
+        // Keep the affix roll intact; replay to the penultimate state for the next seed.
+        let mut next_rng = Rng::new(seed);
+        for _ in 0..rng.n.saturating_sub(1) {
+            next_rng.draw();
+        }
+        (existing, next_rng.lo())
+    }
+
     /// The rolled numbers in game order (reforge.py Sim.values); the cost pseudo-attribute is not in the specs.
     pub fn values(&self, item_idx: usize, seed: u32, affixes: &[usize]) -> Vec<Line> {
         let item = &self.d.items[item_idx];

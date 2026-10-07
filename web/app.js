@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1fc672fd23";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=1fc672fd23";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-search-1";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=sanctify-search-1";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -150,6 +150,15 @@ function combo(input, box, source, emptyText, onPick) {
 
 // ---------- setup ----------
 
+function updateSanctifyControls() {
+  const season = Math.max(1, Math.round(+$("season").value || 40));
+  const available = season >= 40 && (season - 40) % 6 === 0;
+  $("sanctifyCost").hidden = !available;
+  $("sanctifyLimit").hidden = !available;
+  $("csa").disabled = !available;
+  $("sn").disabled = !available;
+}
+
 function start() {
   initTheme();
   initContext();
@@ -162,6 +171,7 @@ function start() {
   combo($("find"), $("pick"), statSource, "No matching stat on this item", (stem) => { wants.push({ stem, min: "" }); renderChips(); });
   $("go").addEventListener("click", go);
   initActions();
+  updateSanctifyControls(); $("season").addEventListener("input", updateSanctifyControls);
   renderItemChips();
   loadStems().then(() => onRoute(routeOfHash()));
 }
@@ -252,6 +262,7 @@ let run = null;   // the run in flight, or the last one: {base, deadline, i, res
 function readRequest() {
   const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
   return {
+    sa: $("csa").value, sn: $("sn").value.trim(),
     c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, String(w.min)]),
     p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
     // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
@@ -275,6 +286,8 @@ function baseQuery(req, item, season, hc) {
     switch: [0, 1, 2, 3, 4, 5, 6].filter((c) => c !== req.c), max_switch: req.xn === "" ? 255 : Math.min(254, +req.xn || 0),
     cost_switch: Math.max(0, Math.round((+req.xs || 0) * 100)),
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
+    max_sanctify: season >= 40 && (season - 40) % 6 === 0 ? ((req.sn ?? "2") === "" ? 255 : Math.min(254, Math.max(0, Math.round(+req.sn || 0)))) : 0,
+    cost_s: cost(req.sa ?? "1"),
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
       const min = m === "" ? null : (isPct(stem) ? +m / 100 : +m);
@@ -410,6 +423,7 @@ async function applyLink(parsed) {
   ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
   $("xn").value = req.xn;
   $("cn").value = req.cn ?? DEFAULT_CONVERTS;
+  $("csa").value = req.sa ?? "1"; $("sn").value = req.sn ?? "2";
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);
