@@ -495,6 +495,28 @@ fn stems_compatible(sim: &mut Sim, item_idx: usize, stems: &[String]) -> bool {
     true
 }
 
+/// A worn primal that can have a socket always has one, and it takes the first primary pick (`Sim::picks`). A stat that can only come
+/// from a primary pick therefore cannot be rolled when the picks left after the socket are already spoken for by the stats chosen so
+/// far: no natural primal carries it, only the Mystic can add it (the Andariel's Visage helm and Blood Nova).
+fn squeezed_out_by_socket(sim: &mut Sim, item_idx: usize, stem: &str, chosen: &[String]) -> bool {
+    let d = sim.d.clone();
+    let item = &d.items[item_idx];
+    if !item.worn || item.weapon {
+        return false;
+    }
+    let only_primary = |sim: &mut Sim, s: &str| stem_resources(sim, item_idx, s) == HashSet::from([Resource::Kind(0)]);
+    // the socket comes from a primary pick (not from a fixed slot, which already gives it)
+    if stem == "Sockets" || !only_primary(sim, stem) {
+        return false;
+    }
+    let socket = stem_resources(sim, item_idx, "Sockets");
+    if socket.is_empty() || socket.iter().any(|r| matches!(r, Resource::Fixed(_))) || !socket.contains(&Resource::Kind(0)) {
+        return false;
+    }
+    let spoken_for = chosen.iter().filter(|s| s.as_str() != "Sockets" && only_primary(sim, s)).count() as u32;
+    item.na.saturating_sub(1) < spoken_for + 1
+}
+
 // ---------------------------------------------------------------------------
 // one item row's required/forced/mystic/free stats (port of build_premade_list.py main()'s per-item loop)
 
@@ -527,6 +549,16 @@ fn pick_stats(sim: &mut Sim, item_idx: usize, texts: &[String], cand_stems: &Has
                         "provably incompatible with {first_name:?} on this item (both can only come from the same single affix slot)")}));
                     continue;
                 }
+            }
+            // what is left would be required: but no natural primal can carry it next to the socket, so the Mystic adds it
+            if squeezed_out_by_socket(sim, item_idx, &stem, &p.required_stems) {
+                let entry = json!({"text": text, "stem": stem, "name": stat_name(&stem), "pos": pos});
+                if p.mystic.is_none() {
+                    p.mystic = Some(entry);
+                } else {
+                    p.free.push(json!({"text": text, "reason": "the forced socket of a worn primal leaves no primary pick for it"}));
+                }
+                continue;
             }
             p.required_stems.push(stem.clone());
             p.required.push(json!({"text": text, "stem": stem, "name": stat_name(&stem), "pos": pos}));
