@@ -603,7 +603,8 @@ impl Sim {
         (existing, rng.lo())
     }
 
-    /// Experimental Sanctify: the ashes affix roll, saving the seed one RNG draw earlier.
+    /// Sanctify uses the ashes affix roll. Six-affix rolls save the seed one draw
+    /// earlier; rolls with fewer affixes keep the ashes seed.
     /// Does not model the Sanctify power or which secondary affix it replaces.
     pub fn sanctify(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
         let d = self.d.clone();
@@ -620,6 +621,11 @@ impl Sim {
         self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
         self.force_socket = false;
         self.ban_sockets = false;
+        // The seasonal power replaces an ordinary affix only when all six slots
+        // are occupied. Five-affix items keep the same next seed as ashes.
+        if existing.len() != 6 {
+            return (existing, rng.lo());
+        }
         // Keep the affix roll intact; replay to the penultimate state for the next seed.
         let mut next_rng = Rng::new(seed);
         for _ in 0..rng.n.saturating_sub(1) {

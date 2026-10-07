@@ -1,0 +1,541 @@
+{
+  "affix_count": 5,
+  "class": "DemonHunter",
+  "hardcore": false,
+  "identifier": "S40-SC-DH-DAGGER-1",
+  "item": "Karlei's Point",
+  "item_id": 2424625647,
+  "notes": "Ordinary affixes only; Sanctify power replacement is not modeled. Percentages are fractions (0.15 = 15%); Sockets value 0 indicates presence. Built-in item power/damage lines are not counted as affixes.",
+  "outcomes": [
+    {
+      "input_seed": 1817983508,
+      "iteration": 1,
+      "next_seed": 929145485,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "Damage",
+          "value": 0.1
+        },
+        {
+          "stat": "KillLife",
+          "value": 11590.0
+        }
+      ]
+    },
+    {
+      "input_seed": 929145485,
+      "iteration": 2,
+      "next_seed": 2799727634,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "HitLife",
+          "value": 23950.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "WeaponHitSlow1h",
+          "value": 0.0259
+        }
+      ]
+    },
+    {
+      "input_seed": 2799727634,
+      "iteration": 3,
+      "next_seed": 3627269223,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "HitLife",
+          "value": 23950.0
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 3627269223,
+      "iteration": 4,
+      "next_seed": 34070513,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "SplashDamage",
+          "value": 0.24
+        },
+        {
+          "stat": "WeaponHitFear1h",
+          "value": 0.0259
+        }
+      ]
+    },
+    {
+      "input_seed": 34070513,
+      "iteration": 5,
+      "next_seed": 437248719,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "CooldownReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 437248719,
+      "iteration": 6,
+      "next_seed": 3882203002,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "CooldownReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "ResourceCostReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 3882203002,
+      "iteration": 7,
+      "next_seed": 2521947143,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "HitLife",
+          "value": 23950.0
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 2521947143,
+      "iteration": 8,
+      "next_seed": 1820343583,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Damage",
+          "value": 0.1
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "KillLife",
+          "value": 11590.0
+        }
+      ]
+    },
+    {
+      "input_seed": 1820343583,
+      "iteration": 9,
+      "next_seed": 713918598,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "HitLife",
+          "value": 23950.0
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 713918598,
+      "iteration": 10,
+      "next_seed": 2818742782,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "ResourceCostReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "WeaponHitChill1h",
+          "value": 0.0259
+        }
+      ]
+    },
+    {
+      "input_seed": 2818742782,
+      "iteration": 11,
+      "next_seed": 153641064,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        }
+      ]
+    },
+    {
+      "input_seed": 153641064,
+      "iteration": 12,
+      "next_seed": 2122743308,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "CooldownReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "DamageVsElite",
+          "value": 0.08
+        },
+        {
+          "stat": "KillLife",
+          "value": 11590.0
+        }
+      ]
+    },
+    {
+      "input_seed": 2122743308,
+      "iteration": 13,
+      "next_seed": 2062872154,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "ResourceCostReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "KillLife",
+          "value": 11590.0
+        }
+      ]
+    },
+    {
+      "input_seed": 2062872154,
+      "iteration": 14,
+      "next_seed": 404955041,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "CooldownReduction",
+          "value": 0.1
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "KillLife",
+          "value": 11590.0
+        }
+      ]
+    },
+    {
+      "input_seed": 404955041,
+      "iteration": 15,
+      "next_seed": 3429893422,
+      "stats": [
+        {
+          "stat": "item power",
+          "value": 3.75
+        },
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 1365.0
+        },
+        {
+          "stat": "ColdD",
+          "value": 335.0
+        },
+        {
+          "stat": "Haste",
+          "value": 0.07
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "Indestructible",
+          "value": 1.0
+        }
+      ]
+    }
+  ],
+  "season": 40,
+  "slot": "Dagger",
+  "source": "Generated from Sim::sanctify. User verified all 15 consecutive ordinary-affix results in game on 2026-10-07. Numeric values are modeled maxima; internal seeds are inferred from the matching sequence.",
+  "starting_seed": 1817983508,
+  "upgrade": 1
+}
