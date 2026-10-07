@@ -32,6 +32,8 @@ const GOOD_ENOUGH: f64 = 0.80;
 
 struct Opts {
     resolved: String,
+    toml: String,
+    dry_run: bool,
     out: String,
     data: String,
     carry: Option<String>,
@@ -52,6 +54,8 @@ struct Opts {
 fn opts() -> Opts {
     let mut o = Opts {
         resolved: String::new(),
+        toml: String::new(),
+        dry_run: false,
         out: String::new(),
         data: concat!(env!("CARGO_MANIFEST_DIR"), "/../web/data.json").to_string(),
         carry: None,
@@ -86,7 +90,13 @@ fn opts() -> Opts {
                 i += 1;
                 continue;
             }
+            "--dry-run" => {
+                o.dry_run = true;
+                i += 1;
+                continue;
+            }
             "--resolved" => o.resolved = val(),
+            "--toml" => o.toml = val(),
             "--out" => o.out = val(),
             "--data" => o.data = val(),
             "--carry" => o.carry = Some(val()),
@@ -104,7 +114,10 @@ fn opts() -> Opts {
         }
         i += 2;
     }
-    assert!(!o.resolved.is_empty() && !o.out.is_empty(), "usage: precons --resolved rows.json --out premade.json [--hc] ...");
+    assert!(
+        (!o.resolved.is_empty() || !o.toml.is_empty()) && !o.out.is_empty(),
+        "usage: precons --toml builds.toml --out premade.json [--hc] [--dry-run] ... (or --resolved rows.json for a pre-resolved file)"
+    );
     o
 }
 
@@ -344,8 +357,19 @@ fn slug(title: &str) -> String {
 fn main() {
     let o = opts();
     let t0 = Instant::now();
-    let doc: Value = serde_json::from_str(&std::fs::read_to_string(&o.resolved).expect("--resolved")).unwrap();
     let data_json = std::fs::read_to_string(&o.data).expect("--data");
+    let doc: Value = if !o.toml.is_empty() {
+        let toml_text = std::fs::read_to_string(&o.toml).expect("--toml");
+        let d = Rc::new(Data::from_json(&data_json).unwrap());
+        d3cube::resolve::resolve_builds(&toml_text, d, o.hc)
+    } else {
+        serde_json::from_str(&std::fs::read_to_string(&o.resolved).expect("--resolved")).unwrap()
+    };
+    if o.dry_run {
+        std::fs::write(&o.out, serde_json::to_string_pretty(&doc).unwrap()).expect("--out");
+        eprintln!("(dry run) wrote {}", o.out);
+        return;
+    }
 
     // distinct searches
     let mut tasks: Vec<Task> = Vec::new();

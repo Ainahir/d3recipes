@@ -174,7 +174,7 @@ pub struct Sim {
     pub eligible: bool,
     pub ilvl: u32,
     pub quality: u32,
-    cls: usize,
+    pub(crate) cls: usize,
     /// primal weapons never roll a socket (set by `primalize` for weapons)
     ban_sockets: bool,
     base: HashMap<(usize, usize, bool), Rc<BaseElig>>,
@@ -190,7 +190,7 @@ impl Sim {
         Sim { d, hero, eligible, ilvl: 70, quality: 9, cls: hero, ban_sockets: false, base: HashMap::new(), twins: HashMap::new(), force_socket: false }
     }
 
-    fn set_class(&mut self, it: &Item) {
+    pub(crate) fn set_class(&mut self, it: &Item) {
         self.cls = it.icls.unwrap_or(self.hero);
     }
 
@@ -216,7 +216,7 @@ impl Sim {
         false
     }
 
-    fn eligible_base(&self, item: &Item, ai: usize, skip_level: bool, skip_quality: bool, wild: bool) -> bool {
+    pub(crate) fn eligible_base(&self, item: &Item, ai: usize, skip_level: bool, skip_quality: bool, wild: bool) -> bool {
         let a = &self.d.affixes[ai];
         if a.legacy_socket || (self.ban_sockets && a.socket) {
             return false;
