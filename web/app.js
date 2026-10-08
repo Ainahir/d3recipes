@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-upstream-2";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-upstream-2";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-crucible-icon-1";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-crucible-icon-1";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -71,6 +71,7 @@ function initTheme() {
 
 function syncContext() {
   const season = Math.max(1, Math.round(+$("season").value || 40));
+  $("sanctifyAvailable").hidden = !supportsSanctify(season);
   $("ctxText").textContent = `Season ${season} · ${$("hc").value === "1" ? "Hardcore" : "Softcore"}`;
   store.set("season", String(season));
   store.set("hc", $("hc").value);

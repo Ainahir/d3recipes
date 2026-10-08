@@ -147,4 +147,5 @@ export const MATERIAL_ICONS = {
   "Corrupted Angel Flesh": { file: "corrupted-angel-flesh.webp", abbr: "CA", color: "#b05a6a" },
   "Westmarch Holy Water": { file: "westmarch-holy-water.webp", abbr: "HW", color: "#3f86a8" },
   "Primordial Ashes": { file: "primordial-ashes.webp", abbr: "PA", color: "#c2562b" },
+  "Angelic Crucible": { file: "angelic-crucible.webp", abbr: "AC", color: "#c9b471" },
 };
