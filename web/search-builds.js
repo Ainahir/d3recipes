@@ -1,4 +1,5 @@
 import {baseQuery,pickHits} from './search-settings.js?v=build-table-1';
+import {readSettings} from './ui.js?v=1571023d0b';
 import {statName,CLASS_NAMES} from './stats.js?v=1fc672fd23';
 import {stepsElement,tooltipRows} from './recipe.js?v=build-result-dom-1';
 const $=id=>document.getElementById('search-builds-'+id);
@@ -75,7 +76,7 @@ $('cancel').addEventListener('click',()=>{cancel();status.textContent='Search ca
 $('run').addEventListener('click',()=>{
  cancel();for(const row of rows)row.best=null;recommendPrimal();
  const number=id=>Math.max(0,Math.round(+$(id).value||0));
- active={queue:rows.filter(r=>!r.owned),settings:{c:build.class,p:['cc','ch','cr','cp'].map(id=>$(id).value),f:number('floor'),n:Math.max(1,number('top')),xn:$('xn').value,xs:$('cs').value,cn:$('cn').value},secs:Math.max(1,number('secs')),season:Math.max(1,+document.getElementById('season').value||40),hc:document.getElementById('hc').value==='1'};
+ active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
  $('run').disabled=true;$('cancel').hidden=false;nextRow();
 });
 function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}

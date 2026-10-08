@@ -2,7 +2,7 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Shared page pieces: the type-ahead picker and the recipe result card, used by custom search and the build pages.
 import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=1571023d0b";
-import { matsHtml, stepsHtml, tooltipRows, supportsSanctify } from "./recipe.js?v=1571023d0b";
+import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=1571023d0b";
 
 // ---------- keyboard-navigable autocomplete ----------
 // source() -> [{html, value}] for the current text; Up/Down move, Enter (or click) picks, Escape closes.
@@ -105,4 +105,22 @@ export function hitHtml(h, tier, snap, item, cls, season, heroName) {
   return `<article class="hit"><div class="head"><span class="tag ${tagCls}">${tagText}</span><span class="aff">${parts.join(", ")}</span></div>
     ${stepsHtml(h, missing, wantStems, { cls, name: heroName })}${craftedNote}${crucibleNote}<div class="mats">${mats}</div>
     <details class="full"><summary>Full tooltip</summary><div class="lines">${lines}</div></details></article>`;
+}
+
+// The cost and limit boxes shared by custom search and the build search, as the request fields the search reads.
+// A box left at its default is undefined, so links and saved searches follow the season's default.
+export function readSettings(season) {
+  const $ = (id) => document.getElementById(id);
+  const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
+  const sa = $("csa").value.trim(), sn = $("sn").value.trim();
+  return {
+    sa: sa === "" || +sa === +DEFAULT_SANCTIFY_PRICE ? undefined : sa,
+    sn: sn === defaultSanctifyCap(season) ? undefined : sn,
+    p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
+    // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
+    xn: $("xn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("xn").value || 0))),
+    xs: String(Math.max(0, +$("cs").value || 0)),   // an empty cost searches as 0, so the link says 0
+    // most Convert Set Item steps per recipe ("" = no limit)
+    cn: $("cn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("cn").value || 0))),
+  };
 }
