@@ -178,7 +178,7 @@ pub struct Query {
     pub min_frac: f64,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, PartialEq)]
 pub struct LineOut {
     pub label: String,
     pub stem: String,
@@ -715,7 +715,23 @@ impl Search {
         } else {
             return;
         };
-        list.push((cost, hit));
+        // Final results have their own equivalence: continuation caps and route
+        // history no longer matter, but quality, tooltip and Mystic options do.
+        let duplicate = list.iter().position(|(_, existing)| {
+            existing.item == hit.item && existing.seed == hit.seed
+                && existing.quality == hit.quality && existing.lines == hit.lines
+                && existing.matched == hit.matched && existing.mystic == hit.mystic
+                && existing.mystic_class == hit.mystic_class
+                && existing.route_class.last().copied().unwrap_or(existing.craft_class)
+                    == hit.route_class.last().copied().unwrap_or(hit.craft_class)
+        });
+        if let Some(i) = duplicate {
+            if (cost, hit.steps) < (list[i].0, list[i].1.steps) {
+                list[i] = (cost, hit);
+            }
+        } else {
+            list.push((cost, hit));
+        }
         if list.len() > cap * 2 {
             list.sort_by_key(|h| (h.0, h.1.steps));
             list.truncate(cap);

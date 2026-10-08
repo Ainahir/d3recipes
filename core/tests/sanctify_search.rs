@@ -64,3 +64,14 @@ fn finite_caps_preserve_routes_that_have_different_remaining_uses() {
     assert_eq!(r.full[0].cost,53);
     assert_eq!(r.full[0].route,vec![('S',2),('P',2)]);
 }
+
+#[test]
+fn equivalent_final_results_keep_only_the_cheapest_route() {
+    let r=search(serde_json::json!({"slots":["Dagger"],"maxsteps":4,"top":8,
+        "max_primalize":255,"max_sanctify":2,"cost_p":25,"cost_s":1,"cost_r":100000,
+        "wants":[{"fam":["Vit"]},{"fam":["SplashDamage"]},{"fam":["WeaponHitFear1h"]}]}));
+    assert_eq!(r.full.len(),1);
+    assert_eq!(r.full[0].seed,34070513);
+    assert_eq!(r.full[0].cost,53);
+    assert_eq!(r.full[0].route,vec![('S',2),('P',2)]);
+}
