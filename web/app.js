@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=0e801f9c08";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=0e801f9c08";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=3c2c597f27";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS } from "./recipe.js?v=3c2c597f27";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -243,7 +243,7 @@ function clampMin(stem, v) {
 }
 
 function renderChips() {
-  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${statName(w.stem)}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" min="0"${statMax.has(w.stem) ? ` max="${statMax.get(w.stem)}" title="Highest this item can roll: ${statMax.get(w.stem)}${isPct(w.stem) ? " %" : ""}"` : ""} placeholder="min${isPct(w.stem) ? " %" : ""}" value="${w.min}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
+  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${statName(w.stem)}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" min="0"${statMax.has(w.stem) ? ` max="${statMax.get(w.stem)}" title="Highest this item can roll: ${isPct(w.stem) ? statMax.get(w.stem) + " %" : fmtValue(w.stem, statMax.get(w.stem))}"` : ""} placeholder="min${isPct(w.stem) ? " %" : ""}" value="${w.min}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
   $("chips").querySelectorAll("input").forEach((el) => {
     el.addEventListener("input", () => { wants[+el.dataset.i].min = el.value; });
     // out-of-range numbers are pulled back to the nearest roll the item can have when the box is left
