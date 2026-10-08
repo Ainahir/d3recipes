@@ -1,6 +1,8 @@
 import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=import-conflicts-1';
 import { parseBuildToml } from './build-toml.js?v=create-build-import-1';
 import { combo } from './affix-picker.js?v=dispose-1';
+// randomUUID exists only on HTTPS and localhost pages; a self-hosted plain-HTTP page needs the fallback
+const uid=()=>globalThis.crypto?.randomUUID?.()??'b-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
 import { CLASS_NAMES, STATS, statName, HIDDEN } from './stats.js?v=1fc672fd23';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
@@ -26,7 +28,7 @@ function render(){for(const i of pickers.keys())disposePicker(i);generation++;$(
   const affixes=document.createElement('div');affixes.id='build-affixes-'+i;
   section.append(heading,label,select,affixes);return section;
 }));$('slots').querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{const i=+el.dataset.row;draft.slots=draft.slots.filter(r=>r.slot!==slots[i]);if(el.value)draft.slots.push({slot:slots[i],item:+el.value,wants:[]});loadAffixes(i);}));slots.forEach((_,i)=>loadAffixes(i));}
-function loadAffixes(i){disposePicker(i);const row=draft.slots.find(r=>r.slot===slots[i]),box=$('affixes-'+i);box.replaceChildren();if(!row)return;const item=info.items.find(it=>it.id===row.item);if(!item){affixPicker({i,item:row.item},[]);return;}if(workerFailure){box.textContent=workerFailure;return;}const key=crypto.randomUUID();pending.set(key,{i,generation,item:row.item});box.textContent='Loading affixes...';worker.postMessage({type:'stems',key,class:draft.class,slot:item.slot,item:row.item});}
+function loadAffixes(i){disposePicker(i);const row=draft.slots.find(r=>r.slot===slots[i]),box=$('affixes-'+i);box.replaceChildren();if(!row)return;const item=info.items.find(it=>it.id===row.item);if(!item){affixPicker({i,item:row.item},[]);return;}if(workerFailure){box.textContent=workerFailure;return;}const key=uid();pending.set(key,{i,generation,item:row.item});box.textContent='Loading affixes...';worker.postMessage({type:'stems',key,class:draft.class,slot:item.slot,item:row.item});}
 function affixPicker(request,stems){const row=draft.slots.find(r=>r.slot===slots[request.i]);if(!row||row.item!==request.item)return;row.wants=row.wants.filter(w=>w.imported||stems.includes(w.stem));const box=$('affixes-'+request.i),inputId='build-statFind-'+request.i,pickId='build-statPick-'+request.i;
 const label=document.createElement('label');label.htmlFor=inputId;label.textContent='Stats you want';
 const chipList=document.createElement('div');chipList.className='chips';
@@ -44,7 +46,7 @@ const chips=()=>{const list=box.querySelector('.chips');list.replaceChildren(...
 worker.onmessage=({data:m})=>{if(m.type==='ready'){info=m.info;$('class').replaceChildren(...info.classes.map((c,i)=>new Option(CLASS_NAMES[c]||c,String(i))));$('editor').hidden=false;$('loading').hidden=true;render();listSaved();}else if(m.type==='stems'){const r=pending.get(m.key);pending.delete(m.key);if(r?.resolve){r.resolve(m.stems);return;}if(r&&r.generation===generation)affixPicker(r,Object.keys(m.stems).filter(s=>!HIDDEN.test(s)).sort((a,b)=>statName(a).localeCompare(statName(b))));}else if(m.type==='error')failRequests(m.message,m.key);};
 $('name').addEventListener('input',()=>draft.name=$('name').value);
 $('class').addEventListener('change',()=>{draft.class=+$('class').value;draft.slots=draft.slots.filter(r=>!r.item||candidates(r.slot).some(it=>it.id===r.item));render();notice('Class changed. Items unavailable to this class were removed.');});
-$('save').addEventListener('click',async()=>{if(!draft.name.trim())return notice('Enter a build name.');if(!draft.slots.length)return notice('Select at least one item.');if(pending.size)return notice('Wait for the affixes to finish loading before saving.');try{draft.name=draft.name.trim();draft.id ||=crypto.randomUUID();const record=structuredClone({...draft,version:1,definition:definition(),updatedAt:new Date().toISOString()});await updateBuilds(list=>{const i=list.findIndex(b=>b.id===record.id);if(i<0)list.push(record);else list.splice(i,1,record);});listSaved();$('saved').value=draft.id;$('clone').hidden=false;notice('Build saved in this browser.');}catch(e){notice('Could not save build: '+e.message);}});
+$('save').addEventListener('click',async()=>{if(!draft.name.trim())return notice('Enter a build name.');if(!draft.slots.length)return notice('Select at least one item.');if(pending.size)return notice('Wait for the affixes to finish loading before saving.');try{draft.name=draft.name.trim();draft.id ||=uid();const record=structuredClone({...draft,version:1,definition:definition(),updatedAt:new Date().toISOString()});await updateBuilds(list=>{const i=list.findIndex(b=>b.id===record.id);if(i<0)list.push(record);else list.splice(i,1,record);});listSaved();$('saved').value=draft.id;$('clone').hidden=false;notice('Build saved in this browser.');}catch(e){notice('Could not save build: '+e.message);}});
 $('saved').addEventListener('change',()=>{try{const b=saved().find(b=>b.id===$('saved').value);if(b){draft=structuredClone(b);render();notice('Saved build loaded.');}}catch(e){notice(e.message);}});
 $('new').addEventListener('click',()=>{draft={id:null,name:'',class:draft.class,slots:[]};render();$('saved').value='';notice('New build.');});
 $('delete').addEventListener('click',async()=>{if(!draft.id)return;try{const id=draft.id;await updateBuilds(list=>{const i=list.findIndex(b=>b.id===id);if(i>=0)list.splice(i,1);});draft.id=null;$('clone').hidden=true;listSaved();notice('Saved build deleted. The editor still contains its items.');}catch(e){notice(e.message);}});
@@ -64,7 +66,7 @@ $('importFile').addEventListener('change',async()=>{
       try{
         const {build,skipped}=await prepareImported(source);
         if(incoming.some(b=>normalize(b.name)===normalize(build.name)))throw Error('Duplicate build name in this file. Rename it before importing.');
-        incoming.push({...build,id:crypto.randomUUID(),version:1,sourceFile:file.name,definition:definition(build),updatedAt:new Date().toISOString()});
+        incoming.push({...build,id:uid(),version:1,sourceFile:file.name,definition:definition(build),updatedAt:new Date().toISOString()});
         count++;if(skipped.length)reports.push(source.name+': skipped '+skipped.join(', '));
       }catch(e){failures.push(source.name+': '+e.message);}
     }
@@ -93,7 +95,7 @@ async function prepareImported(source){
     for(const row of rows){
       const item=info.items.find(it=>it.id===row.item);
       if(item&&!item.classes.includes(hero))throw Error(item.name+' is unavailable to '+info.classes[hero]);
-      const key=crypto.randomUUID();const stems=item?await new Promise((resolve,reject)=>{if(workerFailure){reject(Error(workerFailure));return;}pending.set(key,{resolve,reject});try{worker.postMessage({type:'stems',key,class:hero,slot:item.slot,item:item.id});}catch(e){failRequests(e.message,key);}}):{};
+      const key=uid();const stems=item?await new Promise((resolve,reject)=>{if(workerFailure){reject(Error(workerFailure));return;}pending.set(key,{resolve,reject});try{worker.postMessage({type:'stems',key,class:hero,slot:item.slot,item:item.id});}catch(e){failRequests(e.message,key);}}):{};
       for(const name of row.source.stat_priority||[]){const alias=/^sockets?\b/i.test(name)?'Sockets':({armor:'DR',life:'Life',elitedamage:'DamageVsElite',elitedamagereduction:'DamReductionVsElite'})[normalize(name.replace(/\s*\(Secondary\)/i,''))];const cleanName=name.replace(/\s*\(Secondary\)/i,'').replace(/Death Nova/i,'Blood Nova').replace(/^Cooldown$/i,'Cooldown Reduction');const stem=Object.keys(stems).find(s=>(alias?s===alias:normalize(statName(s))===normalize(cleanName)||normalize(s)===normalize(cleanName)));const canonicalStem=stem||alias||Object.keys(STATS).find(s=>normalize(statName(s))===normalize(cleanName)||normalize(s)===normalize(cleanName));const keyStem=canonicalStem||cleanName;if(!row.wants.some(w=>w.stem===keyStem))row.wants.push({stem:keyStem,min:null,imported:true,exportName:canonicalStem?statName(canonicalStem):cleanName,label:canonicalStem?null:cleanName});}
       delete row.source;
     }
@@ -104,7 +106,7 @@ $('clone').addEventListener('click',async()=>{
   if(!draft.id)return;
   if(pending.size)return notice('Wait for the affixes to finish loading before cloning.');
   try{
-    const copy=structuredClone(draft);copy.id=crypto.randomUUID();copy.name=copy.name.trim()+' - Copy';
+    const copy=structuredClone(draft);copy.id=uid();copy.name=copy.name.trim()+' - Copy';
     delete copy.sourceFile;
     copy.version=1;copy.updatedAt=new Date().toISOString();copy.definition=definition(copy);
     await updateBuilds(list=>list.push(copy));

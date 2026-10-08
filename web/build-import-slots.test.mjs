@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 const source=await readFile(new URL('./create-build.js',import.meta.url),'utf8');
-const context=vm.createContext({slots:['Chest'],info:{classes:['DemonHunter'],items:[{id:1,name:'Test Cloak',classes:[0],slot:'Cloak'}]},normalize:s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,''),crypto:{randomUUID:()=> 'request'},pending:new Map(),workerFailure:null,worker:{postMessage:()=>{}},STATS:{},statName:s=>s});
+const context=vm.createContext({slots:['Chest'],info:{classes:['DemonHunter'],items:[{id:1,name:'Test Cloak',classes:[0],slot:'Cloak'}]},normalize:s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,''),uid:()=>'request',pending:new Map(),workerFailure:null,worker:{postMessage:()=>{}},STATS:{},statName:s=>s});
 const start=source.indexOf('async function prepareImported(');
 vm.runInContext(source.slice(start,source.indexOf("$('clone').addEventListener",start)),context);
 test('Cloak maps to Chest and Potion is skipped before validation',async()=>{
