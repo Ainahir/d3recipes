@@ -7,6 +7,8 @@ import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap,
 // ---------- keyboard-navigable autocomplete ----------
 // source() -> [{html, value}] for the current text; Up/Down move, Enter (or click) picks, Escape closes.
 
+export const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
 export function combo(input, box, source, emptyText, onPick) {
   let items = [], active = -1;
   const paint = () => {

@@ -4,6 +4,7 @@
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
 import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1571023d0b";
 import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=1571023d0b";
+import { esc } from "./ui.js?v=1571023d0b";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -18,7 +19,6 @@ const className = (c) => CLASS_NAMES[c] || c;
 // the class index the generator writes in `by` / `who` / `mystic_by` (the order of data.json's `classes`)
 const CLASS_ORDER = ["DemonHunter", "Barbarian", "Wizard", "WitchDoctor", "Monk", "Crusader", "Necromancer"];
 const heroName = (c) => className(CLASS_ORDER[c]);
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function load(key) {
   if (!cache[key]) {

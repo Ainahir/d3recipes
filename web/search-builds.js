@@ -1,7 +1,7 @@
 import {baseQuery,pickHits} from './search-settings.js?v=build-table-1';
-import {readSettings,clonePanel} from './ui.js?v=1571023d0b';
+import {readSettings,clonePanel,hitHtml,esc} from './ui.js?v=1571023d0b';
 import {statName,CLASS_NAMES} from './stats.js?v=1fc672fd23';
-import {stepsElement,tooltipRows,supportsSanctify,defaultSanctifyCap} from './recipe.js?v=build-result-dom-1';
+import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=build-result-dom-1';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
@@ -36,7 +36,7 @@ function refresh() {
     else if (!active) status.textContent = '';
   } catch (error) {
     cancel();build=undefined;rows=[];$('rows').replaceChildren();$('run').disabled=true;
-    $('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';
+    
     select.replaceChildren(new Option('Choose a saved build', ''));
     status.textContent = 'Could not load saved builds: ' + error.message;
   }
@@ -54,19 +54,23 @@ window.addEventListener('storage', event => {
 refresh();
 
 function cancel(){worker.postMessage({type:'cancel'});job++;active=null;$('cancel').hidden=true;$('run').disabled=!info||!build;}
+const heroName=c=>CLASS_NAMES[info.classes[c]]||info.classes[c];
+// One card per slot, like the prepared lists: the item and the stats wanted, then the recipe cards custom search shows.
+function rowHtml(row){
+ const imported=row.wants.some(w=>w.imported);
+ const items=row.any_item?'Any item':[row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item',...(row.alternatives||[])].join(' or ');
+ const stats=targetStats(row).map((w,i)=>esc(w.label||statName(w.stem))+(imported&&i===2?' (Mystic)':'')).join(', ');
+ const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
+ return `<section class="card slot"><h3>${esc(row.slot)}</h3>
+  <div class="bhead"><span class="nm">${esc(items)}</span><span class="small"${imported?' title="Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export."':''}>${stats}</span></div>
+  <label class="small"><input type="checkbox" data-row="${row.index}" style="width:auto" aria-label="${esc('Already have '+name)}"> Already have it</label>
+  <div id="build-match-${row.index}" class="small">Not searched</div>
+  <div class="small">Cost <span id="build-cost-${row.index}">—</span></div></section>`;
+}
 function renderBuild(){
  cancel();
- try{build=JSON.parse(localStorage.getItem(key)||'[]').find(b=>b.id===select.value);$('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';rows=(build?.slots||[]).map((r,i)=>({...r,index:i,owned:false,results:{}}));
- $('rows').replaceChildren(...rows.map(row=>{
-   const tr=document.createElement('tr');
-   const cell=(text,id)=>{const td=document.createElement('td');if(text!==undefined)td.textContent=text;if(id)td.id=id;tr.append(td);return td;};
-   const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
-   const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.row=String(row.index);checkbox.style.width='auto';checkbox.setAttribute('aria-label','Already have '+name);cell().append(checkbox);
-   cell(row.slot);cell(row.any_item?'Any item':[row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item',...(row.alternatives||[])].join(' or '));
-   const statsCell=cell(targetStats(row).map((w,i)=>(w.label||statName(w.stem))+(row.wants.some(w=>w.imported)&&i===2?' (Mystic)':'')).join(', '));if(row.wants.some(w=>w.imported))statsCell.title='Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export.';
-   cell('Not searched','build-match-'+row.index);cell('—','build-cost-'+row.index);
-   return tr;
- }));
+ try{build=JSON.parse(localStorage.getItem(key)||'[]').find(b=>b.id===select.value);rows=(build?.slots||[]).map((r,i)=>({...r,index:i,owned:false,results:{}}));
+ $('rows').innerHTML=rows.map(rowHtml).join('');
  $('rows').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>setOwned(rows[+el.dataset.row],el.checked)));$('run').disabled=!info||!build;
  }catch(e){status.textContent=e.message;}
 }
@@ -79,13 +83,13 @@ function setOwned(row,owned){
    if(owned&&active.row===row){worker.postMessage({type:'cancel'});job++;nextRow();}
    else if(!owned&&active.row!==row)active.queue.push(row);
  }
- recommendPrimal();
+ 
 }
 select.addEventListener('change',renderBuild);
 $('cancel').addEventListener('click',()=>{cancel();status.textContent='Search cancelled.';});
 $('run').addEventListener('click',()=>{
- cancel();for(const row of rows)row.best=null;recommendPrimal();
- const number=id=>Math.max(0,Math.round(+$(id).value||0));
+ cancel();for(const row of rows)row.best=null;
+ const number=id=>Math.max(0,Math.round(+$(id).value||0)),season=Math.max(1,+document.getElementById('season').value||40);
  active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season,'search-builds-'),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
  $('run').disabled=true;$('cancel').hidden=false;nextRow();
 });
@@ -103,7 +107,7 @@ function searchItems(row,items){
 }
 function nextRow(){
  let row=active.queue.shift();while(row?.owned)row=active.queue.shift();
- if(!row){cancel();status.textContent='Build search complete. Costs use the selected weights.';recommendPrimal();return;}
+ if(!row){cancel();status.textContent='Build search complete. Costs use the selected weights.';return;}
  active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;
  const items=searchItems(row,info.items),item=items[0];
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
@@ -114,14 +118,10 @@ function showMatches(row){
  const snap=targetStats(row).map(w=>w.stem);let chosen=[];
  for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
  const best=bestCandidate(chosen);row.best=best;if(best)row.itemData=info.items.find(item=>item.name===best.hit.name)||row.itemData;
- const cell=document.getElementById('build-match-'+row.index);cell.replaceChildren();
- if(best){
-   const quality=document.createElement('strong');quality.textContent=best.tier==='crafted'?'Crafted primal':best.tier;
-   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Recipe and stats';
-   const steps=stepsElement(best.hit,snap.filter((_,i)=>!best.hit.matched.includes(i)),new Set(snap),{cls:build.class,name:c=>CLASS_NAMES[info.classes[c]]||info.classes[c]});
-   const lines=document.createElement('div');lines.className='lines';
-   for(const row of tooltipRows(best.hit.lines)){const label=document.createElement('span'),value=document.createElement('span');label.textContent=row.label;value.textContent=row.value;lines.append(label,value);}
-   details.append(summary,steps,lines);cell.append(quality,(row.alternatives?.length?' · '+best.hit.name:''),' · '+best.hit.matched.length+'/'+snap.length+' stats'+(row.limited?' · Best found within limits':''),details);
+ const cell=document.getElementById('build-match-'+row.index);
+ if(chosen.length){
+   const named=row.alternatives?.length;
+   cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">Best found within limits</div>':'');
  }else cell.textContent='No matching recipe found'+(row.limited?' within limits':'');
  document.getElementById('build-cost-'+row.index).textContent=best?(best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2}):'—';
 }
@@ -131,31 +131,7 @@ worker.onmessage=({data:m})=>{
  else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});
-for(const el of document.querySelectorAll('#search-builds-costs input, #season, #hc'))el.addEventListener('change',()=>{if(active)cancel();$('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';for(const row of rows){row.best=null;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Settings changed — search again';document.getElementById('build-cost-'+row.index).textContent='—';}});
-
-function recommendPrimal(){
-  $('sanctifySuggestion').textContent='';
-  const candidates=rows.filter(row=>!row.owned&&row.best).sort((a,b)=>b.best.hit.cost-a.best.hit.cost);
-  const highest=candidates.reduce((best,row)=>!best||row.best.hit.cost>best.best.hit.cost?row:best,null);
-  for(const row of rows){const tr=document.getElementById('build-match-'+row.index)?.closest('tr');if(tr){tr.style.backgroundColor='';tr.style.outline='';tr.removeAttribute('aria-selected');}}
-  if(!highest){$('primalSuggestion').textContent='';$('sanctifySuggestion').textContent='';return;}
-  const tr=document.getElementById('build-match-'+highest.index).closest('tr');tr.style.backgroundColor='var(--panel)';tr.style.outline='2px solid var(--accent, #c69340)';tr.setAttribute('aria-selected','true');
-  // One highlighted candidate: the most expensive recipe among the items still needed.
-  for(const row of rows){if(row!==highest){const other=document.getElementById('build-match-'+row.index)?.closest('tr');if(other)other.style.outline='';}}
-  const name=highest.itemData?.name||highest.externalName||highest.slot;
-  $('primalSuggestion').textContent=highest.best.tier==='crafted'
-    ? name+' has the highest recipe cost. Its best match already uses a crafted primal. Only one crafted primal can be equipped per character.'
-    : 'Suggested crafted primal: '+name+' ('+highest.slot+'), the highest-cost recipe at '+(highest.best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2})+'. Consider Improve Legendary instead of this recipe. Only one crafted primal can be equipped per character; its required stats are not guaranteed.';
-  const season=Math.round(+document.getElementById('season').value||40);
-  // Use the requested six-season recurrence from Light's Calling season 34 onward.
-  if(season>=34&&(season-40)%6===0&&candidates.length>1){
-    const second=candidates[1],item=second.itemData?.name||second.externalName||second.slot;
-    const rowElement=document.getElementById('build-match-'+second.index).closest('tr');
-    rowElement.style.outline='2px solid #70aee6';rowElement.setAttribute('aria-selected','true');
-    $('sanctifySuggestion').textContent="Light's Calling — suggested Sanctified item: "+item+' ('+second.slot+'), the second-highest-cost recipe at '+(second.best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2})+'. Use an Angelic Crucible to Sanctify it instead. Sanctification rerolls its stats and adds a random class power; only one Sanctified item can be equipped.';
-  }
-
-}
+for(const el of document.querySelectorAll('#search-builds-costs input, #season, #hc'))el.addEventListener('change',()=>{if(active)cancel();for(const row of rows){row.best=null;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Settings changed — search again';document.getElementById('build-cost-'+row.index).textContent='—';}});
 
 function engineFailed(message){
   if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+message;cancel();}
