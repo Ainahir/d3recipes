@@ -38,3 +38,29 @@ fn unsupported_seasons_allow_explicit_sanctify_with_a_warning() {
         assert!(disabled.warnings.is_empty());
     }
 }
+
+#[test]
+fn equivalent_five_affix_continuations_keep_the_cheapest_cost() {
+    for (p,s,expected_route,expected_cost) in [
+        (25,1,vec![('S',3),('P',1)],29),
+        (1,25,vec![('P',4)],5),
+        (1,1,vec![('P',4)],5),
+    ] {
+        let r=search(serde_json::json!({"slots":["Dagger"],"maxsteps":4,
+            "max_primalize":255,"max_sanctify":255,"cost_p":p,"cost_s":s,"cost_r":100000,
+            "wants":[{"fam":["Vit"]},{"fam":["SplashDamage"]},{"fam":["WeaponHitFear1h"]}]}));
+        assert_eq!(r.full[0].route,expected_route);
+        assert_eq!(r.full[0].cost,expected_cost);
+        assert_eq!(r.full[0].quality,"crafted");
+        assert_eq!(r.full[0].route.last().unwrap().0,'P');
+    }
+}
+
+#[test]
+fn finite_caps_preserve_routes_that_have_different_remaining_uses() {
+    let r=search(serde_json::json!({"slots":["Dagger"],"maxsteps":4,
+        "max_primalize":255,"max_sanctify":2,"cost_p":25,"cost_s":1,"cost_r":100000,
+        "wants":[{"fam":["Vit"]},{"fam":["SplashDamage"]},{"fam":["WeaponHitFear1h"]}]}));
+    assert_eq!(r.full[0].cost,53);
+    assert_eq!(r.full[0].route,vec![('S',2),('P',2)]);
+}

@@ -298,6 +298,9 @@ const CHAIN_CHUNK: u32 = 32;
 /// Nodes kept before the search gives up, which bounds memory (a few hundred MB at most) however long the caller lets it run.
 const NODE_CAP: usize = 3_000_000;
 
+// item, seed, relevant operation counts, hand-overs, holder class, depth
+type StateKey = (u32, u32, u8, u8, u8, u8, u8, u16);
+
 pub struct Search {
     d: Rc<Data>,
     sim: Sim,
@@ -309,7 +312,7 @@ pub struct Search {
     min_match: usize,
     nodes: Vec<NodeRec>,
     heap: BinaryHeap<Reverse<(u64, u64, u32)>>,
-    seen: HashSet<(u32, u32, u8, u8, u8, u8)>,
+    best_cost: HashMap<StateKey, u64>,
     /// root states by (item, seed, hand-overs, crafter): the same item and seed from another crafter is a state of its own
     seen_roots: HashSet<(u32, u32, u8, u8)>,
     fallback: Option<(u64, Hit)>,
@@ -354,7 +357,7 @@ impl Search {
             q,
             nodes: Vec::new(),
             heap: BinaryHeap::new(),
-            seen: HashSet::new(),
+            best_cost: HashMap::new(),
             seen_roots: HashSet::new(),
             fallback: None,
             seq: 0,
@@ -475,10 +478,9 @@ impl Search {
             }
             // Each crafter's root is expanded on its own: the steps after it are rolled by that crafter, and a route another crafter
             // starts can need one hand-over fewer (or stay inside `max_switch`) than the one that reached the same item and seed first.
-            // Measured on the prepared lists, this adds a few dozen nodes in 81M. `seen` still gets the state, so a later step landing on
-            // it is not queued again.
-            let state = self.key(r.item as u32, r.seed, 0, 0, 0, sw);
-            self.seen.insert(state);
+            // Each root also participates in best-cost tracking; independent crafters stay distinct.
+            let state = self.key(r.item as u32, r.seed, 0, 0, 0, sw, cls as u8, 0);
+            self.admit(state, cost);
             let first = self.seen_roots.insert((state.0, state.1, state.5, cls as u8));
             if first {
                 self.push(cost, idx);
@@ -487,11 +489,26 @@ impl Search {
         self.sim.hero = self.q.class;
     }
 
-    /// Duplicate check: a count with no real limit (255 or more) is not part of the state, so an item reached again by another
-    /// route is not searched twice (the first time is the cheapest: the search is cost-ordered).
-    fn key(&self, item: u32, seed: u32, pc: u8, sc: u8, cc: u8, sw: u8) -> (u32, u32, u8, u8, u8, u8) {
-        let lim = |n: u32, v: u8| if n >= 255 { 0 } else { v };
-        (item, seed, lim(self.q.max_primalize, pc), lim(self.q.max_sanctify, sc), lim(self.q.max_convert, cc), lim(self.q.max_switch, sw))
+    /// Equivalent continuations keep finite cap counts, holder class and depth.
+    /// Unlimited operation counters do not distinguish otherwise identical futures.
+    fn key(&self, item: u32, seed: u32, pc: u8, sc: u8, cc: u8, sw: u8, cls: u8, depth: u16) -> StateKey {
+        let remaining_steps = self.q.maxsteps.saturating_sub(depth as u32);
+        let lim = |n: u32, v: u8| {
+            // Omit a counter only when its remaining allowance covers every
+            // possible remaining step. Even a large cap must remain hard.
+            if n.saturating_sub(v as u32) >= remaining_steps { 0 } else { v }
+        };
+        (item, seed, lim(self.q.max_primalize, pc), lim(self.q.max_sanctify, sc), lim(self.q.max_convert, cc), lim(self.q.max_switch, sw), cls, depth)
+    }
+
+    /// Relax an equivalent continuation state, including its remaining caps,
+    /// holder class and step budget. Generation order must not choose the winner.
+    fn admit(&mut self, key: StateKey, cost: u64) -> bool {
+        if self.best_cost.get(&key).map_or(false, |&best| best <= cost) {
+            return false;
+        }
+        self.best_cost.insert(key, cost);
+        true
     }
 
     fn push(&mut self, cost: u64, idx: u32) {
@@ -754,13 +771,13 @@ impl Search {
         // roll still registers its tooltip: on an item of no class every class reaches the same seed (the class changes which
         // affixes are picked, not how many draws they take) with different lines.
         // Reforge
-        for (k, c) in reforgers.into_iter().enumerate() {
+        for c in reforgers {
             self.sim.hero = c;
             let g = self.sim.reforge(item, seed);
             let cq = if g.primal { Q::Primal } else if g.ancient { Q::Ancient } else { Q::Normal };
             let ccost = cost + self.q.cost_r.max(1) + hand(c);
-            let new = self.seen.insert(self.key(item as u32, g.child_seed, pc, sc, cc, swn(c)));
-            if new || (k > 0 && self.need_lines(cq)) {
+            let new = self.admit(self.key(item as u32, g.child_seed, pc, sc, cc, swn(c), c as u8, depth + 1), ccost);
+            if new || self.need_lines(cq) {
                 let cidx = self.nodes.len() as u32;
                 self.nodes.push(NodeRec { item: item as u32, seed: g.child_seed, q: cq, pc, sc, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'R', cls: c as u8, slot, n: n0 });
                 if self.need_lines(cq) {
@@ -774,12 +791,12 @@ impl Search {
         }
         // Improve Legendary
         if (pc as u32) < self.q.max_primalize {
-            for (k, c) in improvers.iter().copied().enumerate() {
+            for c in improvers.iter().copied() {
                 self.sim.hero = c;
                 let (aff, child) = self.sim.primalize(item, seed);
                 let pcost = cost + self.q.cost_p.max(1) + hand(c);
-                let new = self.seen.insert(self.key(item as u32, child, pc + 1, sc, cc, swn(c)));
-                if new || (k > 0 && self.need_lines(Q::Crafted)) {
+                let new = self.admit(self.key(item as u32, child, pc + 1, sc, cc, swn(c), c as u8, depth + 1), pcost);
+                if new || self.need_lines(Q::Crafted) {
                     let cidx = self.nodes.len() as u32;
                     self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc: pc + 1, sc, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'P', cls: c as u8, slot, n: n0 });
                     if self.need_lines(Q::Crafted) {
@@ -799,7 +816,7 @@ impl Search {
                 self.sim.hero = c;
                 let (_, child) = self.sim.sanctify(item, seed);
                 let scost = cost + self.q.cost_s.max(1) + hand(c);
-                if self.seen.insert(self.key(item as u32, child, pc, sc.saturating_add(1), cc, swn(c))) {
+                if self.admit(self.key(item as u32, child, pc, sc.saturating_add(1), cc, swn(c), c as u8, depth + 1), scost) {
                     let cidx = self.nodes.len() as u32;
                     self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc, sc: sc.saturating_add(1), cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'S', cls: c as u8, slot, n: n0 });
                     self.push(scost, cidx);
@@ -807,14 +824,14 @@ impl Search {
             }
         }
         // Convert Set Item: a DIFFERENT item id, always non-Ancient, unavailable on <= 2-piece sets. The target is picked
-        // with the hero's weights, so every hero is tried; one landing on the same item and seed is dropped by `seen`.
+        // with the hero's weights, so every hero is tried; equivalent continuations keep their cheapest cost.
         if (cc as u32) < self.q.max_convert && self.sim.set_pool(item).len() > 2 {
-            for (k, c) in order.clone().into_iter().enumerate() {
+            for c in order.clone() {
                 self.sim.hero = c;
                 let g = self.sim.convert(item, seed);
                 let vcost = cost + self.q.cost_c.max(1) + hand(c);
-                let new = self.seen.insert(self.key(g.target as u32, g.child_seed, pc, sc, cc + 1, swn(c)));
-                if new || (k > 0 && self.need_lines(Q::Normal)) {
+                let new = self.admit(self.key(g.target as u32, g.child_seed, pc, sc, cc + 1, swn(c), c as u8, depth + 1), vcost);
+                if new || self.need_lines(Q::Normal) {
                     let cidx = self.nodes.len() as u32;
                     self.nodes.push(NodeRec { item: g.target as u32, seed: g.child_seed, q: Q::Normal, pc, sc, cc: cc + 1, sw: swn(c), depth: depth + 1, parent: idx, op: b'C', cls: c as u8, slot, n: n0 });
                     if self.need_lines(Q::Normal) {
@@ -845,6 +862,16 @@ impl Search {
                 return true;
             }
             let Some(Reverse((cost, _, idx))) = self.heap.pop() else { break };
+            let n = &self.nodes[idx as usize];
+            let key = self.key(n.item, n.seed, n.pc, n.sc, n.cc, n.sw, n.cls, n.depth);
+            if self.best_cost.get(&key).map_or(false, |&best| cost > best) {
+                // A later generation reached the same continuation more cheaply.
+                left -= 1;
+                if left == 0 {
+                    return false;
+                }
+                continue;
+            }
             self.cost_reached = cost;
             let past_limit = self.q.cost_limit > 0 && cost > self.q.cost_limit;
             let enough = self.kth_full_cost().map_or(false, |k| cost >= k)
@@ -958,5 +985,49 @@ impl Search {
             fallback,
             warnings: self.warnings.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod cost_tracking_tests {
+    use super::*;
+
+    fn search(maxsteps: u32) -> Search {
+        let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q = serde_json::from_value(serde_json::json!({"class":0,"slots":["Helm"],
+            "maxpos":1,"maxsteps":maxsteps,"quality":"crafted","max_primalize":2,
+            "max_sanctify":255,"max_convert":0,"max_switch":2})).unwrap();
+        Search::new(d,q)
+    }
+
+    #[test]
+    fn later_cheaper_arrival_supersedes_an_already_queued_state() {
+        let mut s = search(0);
+        s.heap.clear();
+        s.best_cost.clear();
+        s.chains.clear();
+        let n = &s.nodes[0];
+        let key = s.key(n.item,n.seed,n.pc,n.sc,n.cc,n.sw,n.cls,n.depth);
+        assert!(s.admit(key,100));
+        s.push(100,0);
+        assert!(s.admit(key,2));
+        s.push(2,0);
+        assert!(!s.admit(key,25));
+        assert!(!s.admit(key,2));
+        assert!(s.run(100));
+        assert_eq!(s.processed,1);
+        assert_eq!(s.cost_reached,2);
+    }
+
+    #[test]
+    fn state_equivalence_preserves_future_constraints() {
+        let s=search(10);
+        let key=s.key(1,2,0,0,0,0,0,1);
+        assert_ne!(key,s.key(1,2,1,0,0,0,0,1)); // ashes cap can bind
+        assert_eq!(key,s.key(1,2,0,1,0,0,0,1)); // Sanctify cap cannot bind
+        assert_ne!(key,s.key(1,2,0,0,0,0,1,1)); // another holder
+        assert_ne!(key,s.key(1,2,0,0,0,0,0,2)); // another step budget
+        assert_eq!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,1,0,0,0,0,9));
+        assert_ne!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,2,0,0,0,0,9));
     }
 }
