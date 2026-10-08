@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=37496274c3";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=0e801f9c08";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -146,7 +146,8 @@ export function requestHash(req, season, hc) {
   // the swap settings appear in the link only when they differ from the defaults, so older links and saved searches stay the same
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
-  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}`;
+  const po = req.po ? "&po=1" : "";
+  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}${po}`;
 }
 
 // -> {req, season, hc} or null when the fragment is not a request link
@@ -162,6 +163,7 @@ export function parseRequestHash(hash) {
   const p = (q.get("p") || "").split(",").map(d);
   return {
     req: {
+      po: q.get("po") === "1",
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
       cn: q.has("cn") ? (q.get("cn") === "" ? "" : /^\d+$/.test(q.get("cn")) ? q.get("cn") : DEFAULT_CONVERTS) : DEFAULT_CONVERTS,
       xn: q.has("xn") ? (q.get("xn") === "" ? "" : /^\d+$/.test(q.get("xn")) ? q.get("xn") : DEFAULT_SWAPS) : DEFAULT_SWAPS,
@@ -174,7 +176,7 @@ export function parseRequestHash(hash) {
 
 export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}` +
   ((req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `/${req.xn ?? DEFAULT_SWAPS}~${req.xs ?? DEFAULT_SWITCH}` : "") +
-  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "");
+  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "") + (req.po ? "/po" : "");
 
 const SAVED_KEY = "d3r-saved";
 export function savedList() {

@@ -51,7 +51,7 @@ onmessage = (e) => {
   const m = e.data;
   if (m.type === "search") { job = m.id; search(m.id, m.query, m.budgetMs); }
   else if (m.type === "cancel") { job = -1; }
-  else if (m.type === "stems") { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)) }); }
+  else if (m.type === "stems") { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)), max: JSON.parse(engine.stat_max(m.class, m.slot, m.item || 0)) }); }
 };
 
 boot().catch((e) => postMessage({ type: "error", message: "Could not start: " + e }));

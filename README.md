@@ -68,6 +68,8 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 **2026-10-07**
 
+- Custom search now has a **Primal only** box next to "Stats you want". Ticked, it looks for natural primals alone (no Improve Legendary, ancient or plain legendary results), so the whole time limit goes to them; it is kept in the search link and in saved searches.
+- The minimum for each wanted stat is now checked against the item: the box can't go below 0 or above the highest roll the item can have (Critical Hit Chance on an amulet tops out at 10%), and a typed number outside that is pulled back to the nearest roll the item can have, instead of silently searching for something impossible. Thanks to Rwede for both suggestions.
 - Fixed custom search not offering a Stone of Jordan's maximum-resource line (Maximum Discipline for a Demon Hunter, Fury for a Barbarian, and so on) under "Stats you want", although the ring rolls it. The list now includes what the game's last fixed-slot pass can pick. Thanks to Ainahir for finding it and tracing the cause (#12).
 
 **2026-10-06**

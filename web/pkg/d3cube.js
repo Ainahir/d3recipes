@@ -58,6 +58,28 @@ export class Engine {
         return SearchHandle.__wrap(ret[0]);
     }
     /**
+     * Highest value the first line of each stat family can roll on an item (same keys as `stems`): {stem: max}. Percent
+     * stats are fractions, as in `Want::min`. A stat with no roll (a socket) is left out.
+     * @param {number} _class
+     * @param {string} slot
+     * @param {number} item_id
+     * @returns {string}
+     */
+    stat_max(_class, slot, item_id) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(slot, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.engine_stat_max(this.__wbg_ptr, _class, ptr0, len0, item_id);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Stat families that can appear on items of a slot for a class, or on one item when `item_id` is not 0: {stem: sample label}
      * @param {number} _class
      * @param {string} slot

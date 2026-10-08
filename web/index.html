@@ -50,6 +50,8 @@
   .page { max-width: 1120px; margin: 0 auto; padding: 16px; }
   h1 { margin: 0; }
   h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .h2row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .po { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; }
   a { color: var(--accent); }
   .card {
     background-color: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px;
@@ -257,7 +259,7 @@
     </section>
 
     <section class="card">
-      <h2>2. Stats you want</h2>
+      <div class="h2row"><h2>2. Stats you want</h2><label class="po" title="Only show recipes that end on a natural primal. Crafted primals (Improve Legendary), ancients and plain legendaries are skipped, so the search spends its whole time limit on natural primals."><input id="po" type="checkbox"> Primal only</label></div>
       <div id="chips" class="chips"></div>
       <input id="find" type="text" placeholder="Search stats: crit, cooldown, dexterity, multishot&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="pick">
       <div id="pick" class="pick" role="listbox" hidden></div>
@@ -304,7 +306,7 @@
 
 </div>
 <script defer src="analytics.js"></script>
-<script type="module" src="builds.js?v=37496274c3"></script>
-<script type="module" src="app.js?v=37496274c3"></script>
+<script type="module" src="builds.js?v=0e801f9c08"></script>
+<script type="module" src="app.js?v=0e801f9c08"></script>
 </body>
 </html>
