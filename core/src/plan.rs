@@ -136,6 +136,10 @@ pub struct Query {
     pub mystic_finish: bool,
     #[serde(default)]
     pub mystic: Vec<String>,
+    /// also keep the cheapest recipe that shows every wanted stat but is not a full result (with `mystic_finish`: the Mystic cannot
+    /// finish it) as `Results::fallback`, so a caller whose search finds no full result needs no second search for it
+    #[serde(default)]
+    pub fallback: bool,
     /// stems the Mystic must never replace, besides the wanted ones (e.g. stats the item always rolls)
     #[serde(default)]
     pub keep: Vec<String>,
@@ -251,6 +255,9 @@ pub struct Results {
     pub near: Vec<Hit>,
     /// natural primals and ancients met on the way that show at least `min_match - 1` wants
     pub notable: Vec<Hit>,
+    /// `Query::fallback`: the cheapest recipe with every wanted stat that is not a full result
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback: Option<Hit>,
     pub warnings: Vec<String>,
 }
 
@@ -303,6 +310,9 @@ pub struct Search {
     nodes: Vec<NodeRec>,
     heap: BinaryHeap<Reverse<(u64, u64, u32)>>,
     seen: HashSet<(u32, u32, u8, u8, u8, u8)>,
+    /// root states by (item, seed, hand-overs, crafter): the same item and seed from another crafter is a state of its own
+    seen_roots: HashSet<(u32, u32, u8, u8)>,
+    fallback: Option<(u64, Hit)>,
     seq: u64,
     full: Vec<(u64, Hit)>,
     near: Vec<(u64, Hit)>,
@@ -345,6 +355,8 @@ impl Search {
             nodes: Vec::new(),
             heap: BinaryHeap::new(),
             seen: HashSet::new(),
+            seen_roots: HashSet::new(),
+            fallback: None,
             seq: 0,
             full: Vec::new(),
             near: Vec::new(),
@@ -461,9 +473,14 @@ impl Search {
                 let lines = if r.primal { self.sim.values_max(r.item, &aff) } else { self.sim.values(r.item, r.seed, &aff) };
                 self.register(idx, cost, q, r.item, &aff, lines);
             }
-            // ponytail: another crafter landing the same item and seed is expanded once, by the first (as for hand-overs in
-            // `expand`); its own steps then cost a hand-over. Keying the state by crafter would keep them apart at up to 7x the nodes.
-            if self.seen.insert(self.key(r.item as u32, r.seed, 0, 0, 0, sw)) {
+            // Each crafter's root is expanded on its own: the steps after it are rolled by that crafter, and a route another crafter
+            // starts can need one hand-over fewer (or stay inside `max_switch`) than the one that reached the same item and seed first.
+            // Measured on the prepared lists, this adds a few dozen nodes in 81M. `seen` still gets the state, so a later step landing on
+            // it is not queued again.
+            let state = self.key(r.item as u32, r.seed, 0, 0, 0, sw);
+            self.seen.insert(state);
+            let first = self.seen_roots.insert((state.0, state.1, state.5, cls as u8));
+            if first {
                 self.push(cost, idx);
             }
         }
@@ -639,7 +656,9 @@ impl Search {
         }
         let notable_min = self.min_match.saturating_sub(1).max(1);
         let is_notable = !is_full && !is_near && (q == Q::Primal || q == Q::Ancient) && nw > 0 && matched.len() >= notable_min;
-        if !(is_full || is_near || is_notable) {
+        // every wanted stat and not a full result: what a caller falls back to when nothing is (the Mystic cannot finish it)
+        let is_fallback = self.q.fallback && !is_full && qual_ok && nw > 0 && matched.len() == nw && self.fallback.as_ref().map_or(true, |f| cost <= f.0);
+        if !(is_full || is_near || is_notable || is_fallback) {
             return;
         }
         let (route, route_class, slot, n, root_item, craft_class) = self.route_of(idx);
@@ -665,13 +684,19 @@ impl Search {
             checkpoints: Vec::new(),
             idx,
         };
+        // the cheapest, fewest steps among equals (the order `results` gives the other lists)
+        if is_fallback && self.fallback.as_ref().map_or(true, |f| (cost, hit.steps) < (f.0, f.1.steps)) {
+            self.fallback = Some((cost, hit.clone()));
+        }
         let cap = self.q.top.max(1) * 4;
         let list = if is_full {
             &mut self.full
         } else if is_near {
             &mut self.near
-        } else {
+        } else if is_notable {
             &mut self.notable
+        } else {
+            return;
         };
         list.push((cost, hit));
         if list.len() > cap * 2 {
@@ -917,7 +942,8 @@ impl Search {
         let mut full = pick(&self.full);
         let mut near = pick(&self.near);
         let notable = pick(&self.notable);
-        for h in full.iter_mut().chain(near.iter_mut()) {
+        let mut fallback = self.fallback.as_ref().map(|f| f.1.clone());
+        for h in full.iter_mut().chain(near.iter_mut()).chain(fallback.iter_mut()) {
             let states = self.states(h.idx);
             h.checkpoints = Self::group(&states, &h.route);
             if self.q.trail {
@@ -929,6 +955,7 @@ impl Search {
             full,
             near,
             notable,
+            fallback,
             warnings: self.warnings.clone(),
         }
     }

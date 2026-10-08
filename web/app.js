@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-upstream-1";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-upstream-1";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-upstream-2";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-upstream-2";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -10,6 +10,7 @@ const V = new URL(import.meta.url).searchParams.get("v");
 const worker = new Worker(`./worker.js${V ? "?v=" + V : ""}`, { type: "module" });
 let info = null;
 let stemList = [];           // [{stem, name}]
+let statMax = new Map();     // stem -> the highest value the picked item can roll (box units)
 let wants = [];              // [{stem, min}]
 let itemList = [];           // [{id, name, slot, classes, cross}]
 let pickedItem = null;       // the one item the player is chasing
@@ -42,7 +43,7 @@ initRules();
 worker.onmessage = (e) => {
   const m = e.data;
   if (m.type === "ready") { info = m.info; start(); }
-  else if (m.type === "stems") { const r = pending.get(m.key); if (r) { pending.delete(m.key); r(m.stems); } }
+  else if (m.type === "stems") { const r = pending.get(m.key); if (r) { pending.delete(m.key); r({ stems: m.stems, max: m.max }); } }
   else if (m.type === "progress" || m.type === "done") { if (m.id === searchId) onResults(m.results, m.type === "done"); }
   else if (m.type === "error") { $("status").textContent = "Error: " + m.message; $("go").disabled = false; }
 };
@@ -223,24 +224,40 @@ async function loadStems() {
   const gen = ++stemsGen;
   const ci = +$("cls").value;
   const all = new Map();
+  const maxOf = new Map();
   if (pickedItem) {
     // what the item can roll for its own class and for every other class (one of them may roll or enchant a stat the item's
     // class never gets, e.g. Lightning damage on a Necromancer's amulet, enchanted by a Wizard)
     const classes = [ci, ...[0, 1, 2, 3, 4, 5, 6].filter((c) => c !== ci)];
     for (const c of classes) {
-      const st = await stemsFor(c, pickedItem.slot, pickedItem.id);
+      const { stems: st, max } = await stemsFor(c, pickedItem.slot, pickedItem.id);
       for (const k of Object.keys(st)) if (!HIDDEN.test(k)) all.set(k, statName(k));
+      // the highest each stat can roll on this item for any hero, in the units of the box (percentages as 15, not 0.15)
+      for (const [k, v] of Object.entries(max)) { const u = Math.round((isPct(k) ? v * 100 : v) * 1e4) / 1e4; if (!(u <= (maxOf.get(k) ?? -1))) maxOf.set(k, u); }
     }
   }
   if (gen !== stemsGen) return;
   stemList = [...all.entries()].map(([stem, name]) => ({ stem, name })).sort((a, b) => a.name.localeCompare(b.name));
+  statMax = maxOf;
   wants = wants.filter((w) => all.has(w.stem));
   renderChips();
 }
 
+// a typed minimum, kept between 0 and the item's best roll of that stat ("" stays empty)
+function clampMin(stem, v) {
+  if (v === "" || Number.isNaN(+v)) return "";
+  const hi = statMax.get(stem);
+  const x = Math.max(0, hi === undefined ? +v : Math.min(+v, hi));
+  return String(Math.round(x * 1e4) / 1e4);
+}
+
 function renderChips() {
-  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${statName(w.stem)}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" placeholder="min${isPct(w.stem) ? " %" : ""}" value="${w.min}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
-  $("chips").querySelectorAll("input").forEach((el) => el.addEventListener("input", () => { wants[+el.dataset.i].min = el.value; }));
+  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${statName(w.stem)}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" min="0"${statMax.has(w.stem) ? ` max="${statMax.get(w.stem)}" title="Highest this item can roll: ${isPct(w.stem) ? statMax.get(w.stem) + " %" : fmtValue(w.stem, statMax.get(w.stem))}"` : ""} placeholder="min${isPct(w.stem) ? " %" : ""}" value="${w.min}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
+  $("chips").querySelectorAll("input").forEach((el) => {
+    el.addEventListener("input", () => { wants[+el.dataset.i].min = el.value; });
+    // out-of-range numbers are pulled back to the nearest roll the item can have when the box is left
+    el.addEventListener("change", () => { const w = wants[+el.dataset.i]; w.min = clampMin(w.stem, el.value); el.value = w.min; });
+  });
   $("chips").querySelectorAll("button").forEach((el) => el.addEventListener("click", () => { wants.splice(+el.dataset.x, 1); renderChips(); }));
 }
 
@@ -262,7 +279,7 @@ function readRequest() {
   const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
   return {
     sa: $("csa").value, sn: $("sn").value.trim(),
-    c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, String(w.min)]),
+    c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, clampMin(w.stem, String(w.min))]), po: $("po").checked,
     p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
     // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
     xn: $("xn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("xn").value || 0))),
@@ -302,9 +319,9 @@ function baseQuery(req, item, season, hc) {
 }
 
 function startTier() {
-  const t = TIERS[run.i];
+  const t = run.tiers[run.i];
   const left = Math.max(1000, run.deadline - performance.now());
-  const budget = Math.max(1500, left / (TIERS.length - run.i));
+  const budget = Math.max(1500, left / (run.tiers.length - run.i));
   const q = { ...run.base, quality: t.quality, end_on_primalize: t.crafted };
   if (t.crafted && q.max_primalize < 1) { nextTier(); return; }
   searchId += 1;
@@ -314,7 +331,7 @@ function startTier() {
 
 function nextTier() {
   run.i += 1;
-  if (run.i >= TIERS.length) { finish(); return; }
+  if (run.i >= run.tiers.length) { finish(); return; }
   startTier();
 }
 
@@ -323,6 +340,8 @@ function startRun(req, item, season, hc, secs, onUpdate, onDone, onCancel) {
   if (run && !run.finished) { run.finished = true; worker.postMessage({ type: "cancel" }); if (run.onCancel) run.onCancel(); }
   run = {
     base: baseQuery(req, item, season, hc), deadline: performance.now() + Math.max(1, secs) * 1000,
+    // Primal only keeps natural primals alone: no crafted primal, ancient or plain legendary, so the whole time limit goes to them
+    tiers: req.po ? TIERS.filter((t) => t.key === "primal") : TIERS, po: !!req.po,
     i: 0, results: {}, wantsSnap: req.w.map((w) => w[0]), item, show: req.n,
     stopped: false, capped: false, warnings: new Set(), finished: false, onUpdate, onDone, onCancel,
   };
@@ -330,7 +349,7 @@ function startRun(req, item, season, hc, secs, onUpdate, onDone, onCancel) {
 }
 
 function onResults(r, final) {
-  const t = TIERS[run.i];
+  const t = run.tiers[run.i];
   r.warnings.forEach((w) => run.warnings.add(w));
   run.results[t.key] = r;
   if (final && !r.status.done) run.stopped = true;   // ran out of time in this category
@@ -430,6 +449,7 @@ async function applyLink(parsed) {
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);
+  $("po").checked = !!req.po;
   wants = req.w.map(([stem, min]) => ({ stem, min }));
   await loadStems();   // drops any stat the item cannot roll and redraws the chips
   if (was.season !== season || was.hc !== hc) {
@@ -587,7 +607,9 @@ function resultsHtml(run, final) {
   }
   if (shown.length) html += `<section class="card">${body}</section>`;
   else if (final) {
-    const why = run.stopped
+    const why = run.po && !run.stopped && !run.capped
+      ? "No primal recipe found. Try fewer stats or a longer time limit, or untick Primal only."
+      : run.stopped
       ? "Nothing passable turned up before the time limit. Raise the time limit under Costs and Limits or drop a stat."
       : run.capped
         ? "No recipe turned up within the search limit. Try fewer stats or a lower good-roll floor."

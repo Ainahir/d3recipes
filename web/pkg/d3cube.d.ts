@@ -14,6 +14,11 @@ export class Engine {
     constructor(data_json: string);
     search(query_json: string): SearchHandle;
     /**
+     * Highest value the first line of each stat family can roll on an item (same keys as `stems`): {stem: max}. Percent
+     * stats are fractions, as in `Want::min`. A stat with no roll (a socket) is left out.
+     */
+    stat_max(_class: number, slot: string, item_id: number): string;
+    /**
      * Stat families that can appear on items of a slot for a class, or on one item when `item_id` is not 0: {stem: sample label}
      */
     stems(_class: number, slot: string, item_id: number): string;
@@ -39,6 +44,7 @@ export interface InitOutput {
     readonly engine_describe: (a: number) => [number, number];
     readonly engine_new: (a: number, b: number) => [number, number, number];
     readonly engine_search: (a: number, b: number, c: number) => [number, number, number];
+    readonly engine_stat_max: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly engine_stems: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly searchhandle_results: (a: number) => [number, number];
     readonly searchhandle_run: (a: number, b: number) => number;

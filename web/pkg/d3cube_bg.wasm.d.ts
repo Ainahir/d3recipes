@@ -6,6 +6,7 @@ export const __wbg_searchhandle_free: (a: number, b: number) => void;
 export const engine_describe: (a: number) => [number, number];
 export const engine_new: (a: number, b: number) => [number, number, number];
 export const engine_search: (a: number, b: number, c: number) => [number, number, number];
+export const engine_stat_max: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const engine_stems: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const searchhandle_results: (a: number) => [number, number];
 export const searchhandle_run: (a: number, b: number) => number;

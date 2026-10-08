@@ -48,11 +48,11 @@ fn played_primal_necklace_has_a_socket() {
     );
 }
 
-/// Ring of the Zodiac has no primary pick (all four primaries are fixed slots), so a primal one never has a socket.
+/// Obsidian Ring of the Zodiac has no primary pick (all four primaries are fixed slots), so a primal one never has a socket.
 #[test]
 fn primal_zodiac_has_no_socket() {
     let d = data();
-    let item = d.items.iter().position(|i| i.name == "Ring of the Zodiac").unwrap();
+    let item = d.items.iter().position(|i| i.name == "Obsidian Ring of the Zodiac").unwrap();
     let mut sim = Sim::new(d.clone(), 0, true);
     for k in 0..50u32 {
         let (aff, _) = sim.primalize(item, k.wrapping_mul(2_654_435_761));

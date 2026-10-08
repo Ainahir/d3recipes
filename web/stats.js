@@ -54,15 +54,25 @@ export function isPct(stem) {
   return /^Skill_/.test(stem);
 }
 
-// The game shows these life stats rounded DOWN to a multiple of 16 (seen in game: Life per Hit 21,967 -> 21,952 and Life Regeneration
-// 5,267 -> 5,264). Only stats seen to do it are listed.
-const ROUND_DOWN_16 = new Set(["HitLife", "Regen"]);
+// The game shows these life stats cut down to their first 11 significant bits (a multiple of 2^(e-10) for a value in [2^e, 2^(e+1))): a
+// multiple of 2 from 2,048, of 4 from 4,096, of 8 from 8,192, of 16 from 16,384, of 32 from 32,768. Seen in game, model -> screen: Life per Hit
+// 27,348 -> 27,344, 21,967 -> 21,952, 17,997 -> 17,984, 8,813 -> 8,808, 8,796 -> 8,792; Life Regeneration 5,267 -> 5,264, 7,427 -> 7,424, and
+// 4,888 stays 4,888; Life after Each Kill 17,385 -> 17,376 and 11,590 -> 11,584 (LEDGER V34, V112, V116, V122, V160). A plain "multiple of 16"
+// misses the three values under 16,384. Life per Fury Spent (2,435 -> 2,434) is one observation. Not every big stat does it: Thorns 6,543 and a
+// weapon's 2,325 damage show exact. Only stats seen to do it are listed.
+const CUT_TO_11_BITS = new Set(["HitLife", "Regen", "KillLife", "FuryHeals"]);
+
+export function cutTo11Bits(v) {
+  if (!(v >= 2048)) return v;
+  const step = 2 ** (Math.floor(Math.log2(v)) - 10);
+  return Math.floor(v / step) * step;
+}
 
 export function fmtValue(stem, v) {
   if (stem === "Sockets" || stem === "Indestructible") return "";
   if (Number.isNaN(v)) return "?";
   if (isPct(stem)) return (Math.round(v * 1000) / 10).toString() + "%";
-  if (ROUND_DOWN_16.has(stem)) v = Math.floor(v / 16) * 16;
+  if (CUT_TO_11_BITS.has(stem)) v = cutTo11Bits(v);
   return Math.round(v).toLocaleString("en-US");
 }
 
@@ -75,6 +85,7 @@ export const SLOT_NAMES = {
   Axe2H: "Axe (2H)", Mace: "Mace (1H)", Mace2H: "Mace (2H)", Dagger: "Dagger", Spear: "Spear", Polearm: "Polearm", Staff: "Staff", Wand: "Wand",
   Bow: "Bow", Crossbow: "Crossbow", HandXbow: "Hand Crossbow", Scythe1H: "Scythe (1H)", Scythe2H: "Scythe (2H)", Flail1H: "Flail (1H)",
   Flail2H: "Flail (2H)", MightyWeapon1H: "Mighty Weapon (1H)", MightyWeapon2H: "Mighty Weapon (2H)", CeremonialDagger: "Ceremonial Knife", FistWeapon: "Fist Weapon", MightyBelt: "Mighty Belt", Phylactery: "Phylactery", Daibo: "Daibo",
+  TemplarRelic: "Templar Relic", EnchantressFocus: "Enchantress Focus", ScoundrelToken: "Scoundrel Token",
 };
 
 export const RECIPES = {

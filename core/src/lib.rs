@@ -96,6 +96,35 @@ impl Engine {
         serde_json::to_string(&seen).unwrap()
     }
 
+    /// Highest value the first line of each stat family can roll on an item (same keys as `stems`): {stem: max}. Percent
+    /// stats are fractions, as in `Want::min`. A stat with no roll (a socket) is left out.
+    pub fn stat_max(&self, class: usize, slot: &str, item_id: u32) -> String {
+        let d = &self.d;
+        let mut sim = sim::Sim::new(d.clone(), class.min(6), true);
+        let mut best: std::collections::BTreeMap<String, f64> = std::collections::BTreeMap::new();
+        if let Some(s) = d.slots.iter().find(|s| s.name == slot) {
+            for &(item, _) in &s.pools[class.min(6)] {
+                if item_id != 0 && d.items[item].id != item_id {
+                    continue;
+                }
+                for ai in sim.candidate_affixes(item) {
+                    let a = &d.affixes[ai];
+                    if a.stem.is_empty() {
+                        continue;
+                    }
+                    if let Some(sp) = a.specs.first() {
+                        let v = sim::eval_formula(&sp.code, None);
+                        let e = best.entry(a.stem.clone()).or_insert(v);
+                        if v > *e {
+                            *e = v;
+                        }
+                    }
+                }
+            }
+        }
+        serde_json::to_string(&best).unwrap()
+    }
+
     pub fn search(&self, query_json: &str) -> Result<SearchHandle, JsValue> {
         let q: Query = serde_json::from_str(query_json).map_err(|e| JsValue::from_str(&e.to_string()))?;
         if q.class >= 7 {
