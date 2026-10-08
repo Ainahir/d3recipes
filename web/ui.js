@@ -109,8 +109,8 @@ export function hitHtml(h, tier, snap, item, cls, season, heroName) {
 
 // The cost and limit boxes shared by custom search and the build search, as the request fields the search reads.
 // A box left at its default is undefined, so links and saved searches follow the season's default.
-export function readSettings(season) {
-  const $ = (id) => document.getElementById(id);
+export function readSettings(season, prefix = "") {
+  const $ = (id) => document.getElementById(prefix + id);
   const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
   const sa = $("csa").value.trim(), sn = $("sn").value.trim();
   return {
@@ -123,4 +123,15 @@ export function readSettings(season) {
     // most Convert Set Item steps per recipe ("" = no limit)
     cn: $("cn").value.trim() === "" ? "" : String(Math.max(0, Math.round(+$("cn").value || 0))),
   };
+}
+
+// A second copy of custom search's "Costs and Limits" panel for another page, built from the first so the two always offer the
+// same boxes. Ids gain the prefix; every box starts at its default. Returns the <details> element.
+export function clonePanel(prefix) {
+  const panel = document.getElementById("cc").closest("details").cloneNode(true);
+  for (const el of panel.querySelectorAll("[id]")) el.id = prefix + el.id;
+  for (const el of panel.querySelectorAll("[for]")) el.htmlFor = prefix + el.getAttribute("for");
+  for (const el of panel.querySelectorAll("[aria-describedby]")) el.setAttribute("aria-describedby", prefix + el.getAttribute("aria-describedby"));
+  for (const el of panel.querySelectorAll("input")) el.value = el.defaultValue;
+  return panel;
 }

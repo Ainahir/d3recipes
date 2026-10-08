@@ -330,27 +330,7 @@
         <label for="search-builds-saved">Saved build</label>
         <select id="search-builds-saved"><option value="">Choose a saved build</option></select>
         <button id="search-builds-create" class="btn" type="button">Create new build</button>
-      <details id="search-builds-costs" style="margin-top:10px">
-        <summary>Costs and Limits</summary>
-        <p class="small" style="margin:10px 0 0">Relative cost of one step of each kind. The search finds the recipe with the lowest total by these weights, so only the ratios matter.</p>
-        <div class="opts">
-          <div><label for="search-builds-cc">Convert Set Item</label><input id="search-builds-cc" type="number" min="0.01" step="any" value="0.75"></div>
-          <div><label for="search-builds-ch">Hope of Cain</label><input id="search-builds-ch" type="number" min="0.01" step="any" value="1"></div>
-          <div><label for="search-builds-cr">Reforge</label><input id="search-builds-cr" type="number" min="0.01" step="any" value="5"></div>
-          <div><label for="search-builds-cp">Improve Legendary</label><input id="search-builds-cp" type="number" min="0.01" step="any" value="25"></div>
-          <div><label for="search-builds-cs" title="Relative cost of handing the item to a hero of another class (a throwaway level 1 will do), in the same units as the costs before it. Higher means fewer swaps.">Hero swap</label><input id="search-builds-cs" type="number" min="0" step="any" value="1"></div>
-        </div>
-        <div class="opts">
-          <div><label for="search-builds-floor" title="Minimum roll for a wanted stat on ancient and legendary results, as a percentage of its maximum. Primals are always maximum.">Good roll (%)</label><input id="search-builds-floor" type="number" min="0" max="100" value="75"></div>
-          <div><label for="search-builds-top">Recipes shown</label><input id="search-builds-top" type="number" min="1" max="6" value="1"></div>
-          <div><label for="search-builds-secs">Time limit (s)</label><input id="search-builds-secs" type="number" min="1" max="120" value="15"></div>
-        </div>
-        <p class="small" style="margin:10px 0 0">How far the search may branch. Converts and hero swaps cost little, so each one more can find cheaper recipes but makes the search much slower. Leave a box empty for no limit. A hero swap hands the item to another class for a cube step: the item keeps its seed and the hero's class changes what it rolls. The item is always created by the class saved in the selected build, and the Mystic may be any class.</p>
-        <div class="opts">
-          <div><label for="search-builds-cn" title="Most Convert Set Item steps in one recipe. Leave empty for no limit.">Most converts</label><input id="search-builds-cn" type="number" min="0" step="1" value="2" placeholder="no limit"></div>
-          <div><label for="search-builds-xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Most hero swaps</label><input id="search-builds-xn" type="number" min="0" step="1" value="0" placeholder="no limit"></div>
-        </div>
-      </details>
+      <div id="search-builds-costs-slot"></div>
         <p id="search-builds-status" class="small" role="status" aria-live="polite"></p>
       </section>
       <button id="search-builds-run" class="go" type="button" disabled>Find build items</button>

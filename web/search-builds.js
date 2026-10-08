@@ -1,7 +1,7 @@
 import {baseQuery,pickHits} from './search-settings.js?v=build-table-1';
-import {readSettings} from './ui.js?v=1571023d0b';
+import {readSettings,clonePanel} from './ui.js?v=1571023d0b';
 import {statName,CLASS_NAMES} from './stats.js?v=1fc672fd23';
-import {stepsElement,tooltipRows} from './recipe.js?v=build-result-dom-1';
+import {stepsElement,tooltipRows,supportsSanctify,defaultSanctifyCap} from './recipe.js?v=build-result-dom-1';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
@@ -9,6 +9,16 @@ const tiers=['primal'];
 const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
 const key = 'd3recipes-user-builds-v1';
+// The cost and limit boxes are custom search's own, copied, so both pages offer the same ones.
+const panel=clonePanel('search-builds-');panel.id='search-builds-costs';document.getElementById('search-builds-costs-slot').replaceWith(panel);
+let capEdited=false;
+function updateSanctify(){
+  const season=Math.max(1,Math.round(+document.getElementById('season').value||40));
+  if(!capEdited)$('sn').value=defaultSanctifyCap(season);
+  $('sanctifyWarning').hidden=supportsSanctify(season)||($('sn').value.trim()!==''&&+$('sn').value<=0);
+}
+$('sn').addEventListener('input',()=>{capEdited=true;updateSanctify();});
+document.getElementById('season').addEventListener('input',updateSanctify);updateSanctify();
 
 function refresh() {
   const selected = select.value;
@@ -76,7 +86,7 @@ $('cancel').addEventListener('click',()=>{cancel();status.textContent='Search ca
 $('run').addEventListener('click',()=>{
  cancel();for(const row of rows)row.best=null;recommendPrimal();
  const number=id=>Math.max(0,Math.round(+$(id).value||0));
- active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
+ active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season,'search-builds-'),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
  $('run').disabled=true;$('cancel').hidden=false;nextRow();
 });
 function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}
