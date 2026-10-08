@@ -75,6 +75,7 @@ export const SLOT_NAMES = {
   Axe2H: "Axe (2H)", Mace: "Mace (1H)", Mace2H: "Mace (2H)", Dagger: "Dagger", Spear: "Spear", Polearm: "Polearm", Staff: "Staff", Wand: "Wand",
   Bow: "Bow", Crossbow: "Crossbow", HandXbow: "Hand Crossbow", Scythe1H: "Scythe (1H)", Scythe2H: "Scythe (2H)", Flail1H: "Flail (1H)",
   Flail2H: "Flail (2H)", MightyWeapon1H: "Mighty Weapon (1H)", MightyWeapon2H: "Mighty Weapon (2H)", CeremonialDagger: "Ceremonial Knife", FistWeapon: "Fist Weapon", MightyBelt: "Mighty Belt", Phylactery: "Phylactery", Daibo: "Daibo",
+  TemplarRelic: "Templar Relic", EnchantressFocus: "Enchantress Focus", ScoundrelToken: "Scoundrel Token",
 };
 
 export const RECIPES = {

@@ -12,7 +12,7 @@
 //! nodes, the row ships without the Mystic step (`nomystic` names the stat that does not fit). Every limit is a setting; 255 for a
 //! count means unlimited. Prices are whole numbers (default 100, 500, 75, 2500 = the page's 1 : 5 : 0.75 : 25 in hundredths).
 //! `--staples DEF.json` generates the staples (class-agnostic items, each on the cheapest class: a natural primal, or an ancient or better
-//! for `want = "ancient"`, never Improve Legendary since it costs ashes) from their resolved definitions; `--salvage` generates the
+//! for `want = "ancient"`, any legendary for `want = "any"` (follower tokens), never Improve Legendary since it costs ashes) from their resolved definitions; `--salvage` generates the
 //! cheapest natural primal per slot (any item, any class, no Improve Legendary). `--carry` copies whichever of the two is not generated.
 use d3cube::data::Data;
 use d3cube::plan::{Checkpoint, Hit, Query};
@@ -27,6 +27,8 @@ use std::time::Instant;
 const CLASSES: [&str; 7] = ["DemonHunter", "Barbarian", "Wizard", "WitchDoctor", "Monk", "Crusader", "Necromancer"];
 const MAIN_STEMS: [&str; 9] = ["Str", "Dex", "Int", "StrDex", "StrInt", "StrVit", "DexInt", "DexVit", "IntVit"];
 const NO_MAGNITUDE: [&str; 2] = ["Sockets", "Indestructible"];
+/// the follower token slots (Templar Relic, Enchantress Focus, Scoundrel Token): staples only, never salvage
+const FOLLOWER_SLOTS: [&str; 3] = ["TemplarRelic", "EnchantressFocus", "ScoundrelToken"];
 /// a stop-off ancient or legendary must roll each required stat at this fraction of its maximum (the player's definition)
 const GOOD_ENOUGH: f64 = 0.80;
 
@@ -511,7 +513,12 @@ fn main() {
             let hits = par(o.threads, &data_json, &jobs, |d, &(k, c)| {
                 let st = &defs[k];
                 let req = stems(&st["required_stats"]);
-                let q = simple_query(c, st["hero_slot"].as_str().unwrap(), &[hex(st["item_id"].as_str().unwrap())], &req, st["want"] == "ancient", &o);
+                let mut q = simple_query(c, st["hero_slot"].as_str().unwrap(), &[hex(st["item_id"].as_str().unwrap())], &req, st["want"] == "ancient", &o);
+                if st["want"] == "any" {
+                    // any legendary of the item will do (follower tokens): no ancient or primal bar
+                    q.quality = "any".into();
+                    q.min_frac = 0.0;
+                }
                 simple_run(d, q)
             });
             let mut out = Vec::new();
@@ -530,7 +537,8 @@ fn main() {
         carry.get("salvage").cloned().unwrap_or(json!([]))
     } else {
         let d0 = Data::from_json(&data_json).unwrap();
-        let slots: Vec<String> = d0.slots.iter().map(|s| s.name.clone()).collect();
+        // follower tokens have no ancient or primal form: nothing to salvage
+        let slots: Vec<String> = d0.slots.iter().map(|s| s.name.clone()).filter(|n| !FOLLOWER_SLOTS.contains(&n.as_str())).collect();
         let jobs: Vec<(usize, usize)> = (0..slots.len()).flat_map(|k| (0..7).map(move |c| (k, c))).collect();
         let hits = par(o.threads, &data_json, &jobs, |d, &(k, c)| {
             if d.slots[k].pools[c].is_empty() {
