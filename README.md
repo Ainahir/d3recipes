@@ -66,6 +66,13 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 
 ## Changelog
 
+**2026-10-08**
+
+- Custom search can use Angelic Crucibles in the seasons that have them (Light's Calling: Season 27, 34, 40, and every sixth season after, going by the season-theme rotation). Sanctifying rolls the same affixes as Improve Legendary; on an item with six affixes the seasonal power takes the place of the last one, which also changes what the next cube step gives, so a crucible partway through a recipe can lead to a cheaper one. Under Costs and Limits, **Sanctification** sets its price (5 by default, the same as Reforge) and **Most Sanctifications** limits it per recipe (2 by default in those seasons, 0 elsewhere; it can still be turned on in other seasons for testing, with a warning). A recipe never ends on a crucible, since only one sanctified item can be worn, but crafted-primal results note that one can stand in for the last Improve Legendary. Confirmed in game: 15 Sanctifications in a row on an Accursed Visage and on a Karlei's Point, others by a hero of another class, a seven-step route to a primal Hell Walkers, and The Compass Rose predicted blind.
+- Fixed Improve Legendary by a hero of another class on a class item (a Demon Hunter upgrading a Crusader's belt): it takes one extra draw, as Reforge and Convert Set Item already did, so the steps after it come out differently. Confirmed in game, the last two blind: a Demon Hunter's helm, dagger and quiver upgraded by a Barbarian, a Vigilante Belt (eight steps) and a Band of Might (seven). The prepared builds are regenerated with it: 6 softcore and 5 hardcore rows changed.
+- Fixed custom search, the prepared builds and the salvage page sometimes missing a cheaper recipe when two routes led to the same item: the first one found won even when the other was cheaper. Most of the salvage page got cheaper (29 of 88 entries), and a few searches did too.
+- Thanks to Ainahir for all of it, and for the care that went into it: every rule above came with in-game tests on a whole sequence of results, the cross-class Improve Legendary bug was found and pinned down along the way, and details like the crucible's own material icon were not forgotten (#7).
+
 **2026-10-07**
 
 - Life per Hit, Life Regeneration, Life after Each Kill and Life per Fury Spent now show the number the game shows. The game cuts these big values down to a multiple of 2, 4, 8, 16 or 32 depending on size (Life per Hit 8,796 shows as 8,792, Life after Each Kill 17,385 as 17,376); the page used to cut every one of them to a multiple of 16, which was wrong below 16,384.
