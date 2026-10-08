@@ -72,3 +72,49 @@ fn six_affix_helm_matches_editable_game_fixture() {
 fn five_affix_dagger_matches_editable_game_fixture() {
     check_fixture(include_str!("../../testdata/sanctify_5_affix.json"));
 }
+
+#[test]
+fn cross_class_helm_matches_four_observed_sanctifications() {
+    let d = data();
+    let f: serde_json::Value = serde_json::from_str(include_str!("../../testdata/sanctify_cross_class_helm.json")).unwrap();
+    let crafter = d.classes.iter().position(|c| c == f["craft_class"].as_str().unwrap()).unwrap();
+    let hero = d.classes.iter().position(|c| c == f["sanctify_class"].as_str().unwrap()).unwrap();
+    let slot = d.slots.iter().find(|s| s.name == f["slot"].as_str().unwrap()).unwrap();
+    let root = chain_roots(&slot.pools[crafter], slot.key, f["season"].as_u64().unwrap() as u32,
+        f["hardcore"].as_bool().unwrap(), f["upgrade"].as_u64().unwrap() as u32, true, crafter, &d.items).remove(0);
+    assert_eq!(d.items[root.item].name, f["item"].as_str().unwrap());
+    assert_eq!(root.seed as u64, f["starting_seed"].as_u64().unwrap());
+    let mut sim = Sim::new(d.clone(), hero, true);
+    let mut seed = root.seed;
+    let outcomes = f["outcomes"].as_array().unwrap();
+    assert_eq!(outcomes.len(), 4);
+    for (i, outcome) in outcomes.iter().enumerate() {
+        assert_eq!(outcome["iteration"].as_u64().unwrap(), (i + 1) as u64);
+        assert_eq!(seed as u64, outcome["input_seed"].as_u64().unwrap());
+        let (aff, next) = sim.sanctify(root.item, seed);
+        assert_eq!(aff.len(), 6);
+        // The game observation contains five ordinary lines plus seasonal power.
+        let mut actual: Vec<_> = aff[..5].iter().map(|&a| d.affixes[a].stem.as_str()).collect();
+        let mut expected: Vec<_> = outcome["observed_stats"].as_array().unwrap().iter().map(|s| s.as_str().unwrap()).collect();
+        actual.sort_unstable(); expected.sort_unstable();
+        assert_eq!(actual, expected, "observed roll {}", i + 1);
+        assert_eq!(next as u64, outcome["next_seed"].as_u64().unwrap(), "inferred seed, roll {}", i + 1);
+        seed = next;
+    }
+}
+
+#[test]
+fn cross_class_chest_matches_observed_stats_and_following_gloves_convert() {
+    let d = data();
+    let item = d.items.iter().position(|i| i.name == "Cage of the Hellborn").unwrap();
+    let mut sim = Sim::new(d.clone(), 1, true);
+    let (aff, seed) = sim.sanctify(item, 3464113595);
+    let mut actual: Vec<_> = aff[..5].iter().map(|&a| d.affixes[a].stem.as_str()).collect();
+    let mut expected = vec!["Dex", "Sockets", "HatredRegen", "Skill_DemonHunter_SpikeTrap", "MaxDiscipline"];
+    actual.sort_unstable(); expected.sort_unstable();
+    assert_eq!(actual, expected);
+    assert_eq!(seed, 3897317362); // inferred from the draw model
+    sim.hero = 0;
+    let converted = sim.convert(item, seed);
+    assert_eq!(d.items[converted.target].name, "Fiendish Grips");
+}

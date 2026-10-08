@@ -1,0 +1,18 @@
+{
+  "season": 40,
+  "hardcore": false,
+  "craft_class": "DemonHunter",
+  "sanctify_class": "Barbarian",
+  "slot": "Helm",
+  "upgrade": 1,
+  "item": "Accursed Visage",
+  "starting_seed": 2438299784,
+  "source": "User verified all four consecutive in-game affix outcomes on 2026-10-08. Values were not checked. Internal seeds are inferred from the extra cross-class draw model.",
+  "notes": "Observed ordinary affixes only; the seasonal power replaces the last modeled secondary. Compare affixes without values or ordering. Seed predictions are separate from game observations.",
+  "outcomes": [
+    {"iteration": 1, "input_seed": 2438299784, "next_seed": 2746460255, "observed_stats": ["Dex", "Sockets", "Life", "HitLife", "FireResist"]},
+    {"iteration": 2, "input_seed": 2746460255, "next_seed": 3104406203, "observed_stats": ["Dex", "Sockets", "CriticalChance", "Skill_DemonHunter_Impale", "GoldPickUpRadius"]},
+    {"iteration": 3, "input_seed": 3104406203, "next_seed": 797698578, "observed_stats": ["Dex", "Sockets", "Skill_DemonHunter_Multishot", "CriticalChance", "REQ"]},
+    {"iteration": 4, "input_seed": 797698578, "next_seed": 3225684673, "observed_stats": ["Dex", "Sockets", "Vit", "CriticalChance", "Experience"]}
+  ]
+}

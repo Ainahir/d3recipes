@@ -3,7 +3,23 @@
 - `sanctify_6_affix.json`: Season 40 softcore, Demon Hunter, Helm #1, Accursed Visage.
 - `sanctify_5_affix.json`: Season 40 softcore, Demon Hunter, Dagger #1, Karlei's Point.
 
-Each file contains 15 consecutive Sanctifications of the same starting item.
+`sanctify_cross_class_helm.json` records four consecutive Sanctifications of
+Demon Hunter Helm #1 by a Barbarian. On 2026-10-08 the user verified all four
+affix outcomes in game. Only those four are included; subsequent predictions
+are not game-verified. This fixture lists the five observed ordinary affixes,
+excluding the affix replaced by seasonal power. Values were not checked and
+internal seeds are model predictions. A separate regression covers the observed
+Barbarian Sanctification of Cage of the Hellborn at seed 3464113595 and the
+following Demon Hunter Convert to Fiendish Grips.
+
+`sanctify_cross_class_route.json` records the complete game-verified route from
+Demon Hunter Pants #2 to primal Hell Walkers, including both initial upgrades
+and all seven operations with their performing classes. The user confirmed all
+steps reproduced on 2026-10-08. The test checks every item, quality, ordinary
+stat/value and inferred seed. Seasonal powers and the secondaries they replace
+are excluded from Sanctify observations.
+
+Each same-class file contains 15 consecutive Sanctifications of the same starting item.
 The expected outcomes were generated from `Sim::sanctify`. On 2026-10-07, the
 user confirmed that all 15 consecutive ordinary-affix results in each file match
 the game. Numeric values are modeled maxima; the internal seeds are inferred

@@ -780,6 +780,7 @@ impl Search {
         let twin = self.sim.class_twins(item);
         let reforgers = distinct(&|c| (icls.unwrap_or(twin[c]), icls.map_or(false, |ic| ic != c)));
         let improvers = distinct(&|c| (icls.unwrap_or(twin[c]), false));
+        let sanctifiers = distinct(&|c| (icls.unwrap_or(twin[c]), icls.map_or(false, |ic| ic != c)));
         let cs = self.q.cost_switch;
         let hand = move |c: usize| if c == cur { 0 } else { cs };
         let swn = move |c: usize| if c == cur { sw } else { sw.saturating_add(1) };
@@ -792,7 +793,7 @@ impl Search {
             moves.extend(improvers.iter().map(|&c| (self.q.cost_p.max(1) + hand(c), b'P', c)));
         }
         if (sc as u32) < self.q.max_sanctify {
-            moves.extend(improvers.iter().map(|&c| (self.q.cost_s.max(1) + hand(c), b'S', c)));
+            moves.extend(sanctifiers.iter().map(|&c| (self.q.cost_s.max(1) + hand(c), b'S', c)));
         }
         if (cc as u32) < self.q.max_convert && self.sim.set_pool(item).len() > 2 {
             moves.extend(order.iter().map(|&c| (self.q.cost_c.max(1) + hand(c), b'C', c)));
@@ -1056,5 +1057,21 @@ mod cost_tracking_tests {
         }).collect();
         assert!(costs.iter().any(|&cost|cost>=11));
         assert!(costs.windows(2).all(|p|p[0]<=p[1]),"{costs:?}");
+    }
+
+    #[test]
+    fn class_item_sanctify_keeps_same_and_cross_class_candidates() {
+        let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q = serde_json::from_value(serde_json::json!({"class":0,"slots":["Helm"],
+            "maxpos":1,"maxsteps":1,"quality":"primal","max_primalize":1,
+            "max_sanctify":1,"switch":[1],"max_switch":1})).unwrap();
+        let mut s = Search::new(d, q);
+        s.expand(0, 1);
+        let sanctifies: Vec<_> = s.nodes.iter().filter(|n| n.parent == 0 && n.op == b'S').collect();
+        assert_eq!(sanctifies.len(), 2);
+        assert!(sanctifies.iter().any(|n| n.cls == 0 && n.seed == 2496802170 && n.sw == 0));
+        assert!(sanctifies.iter().any(|n| n.cls == 1 && n.seed == 2746460255 && n.sw == 1));
+        // Ashes' cross-class behavior is unchanged; do not apply this rule to it.
+        assert_eq!(s.nodes.iter().filter(|n| n.parent == 0 && n.op == b'P').count(), 1);
     }
 }
