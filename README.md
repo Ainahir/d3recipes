@@ -73,6 +73,7 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 - Fixed custom search, the prepared builds and the salvage page sometimes missing a cheaper recipe when two routes led to the same item: the first one found won even when the other was cheaper. Most of the salvage page got cheaper (29 of 88 entries), and a few searches did too.
 - Thanks to Ainahir for all of it, and for the care that went into it: every rule above came with in-game tests on a whole sequence of results, the cross-class Improve Legendary bug was found and pinned down along the way, and details like the crucible's own material icon were not forgotten (#7).
 - Hovering over **Most Sanctifications** now explains it: 0 turns Sanctification off whatever its cost, and an empty box means no limit. Thanks to Ainahir (#15).
+- Fixed weapons' on-hit crowd-control chances (Fear, Stun, Chill, Slow and so on) showing internal names such as "Weapon Hit Fear1h" in the stat list, and their values as 0: they now read "Chance to Fear on Hit" and show as percentages, like the same chances on other items. Damage against Beasts and against Undead (Monster Hunter, Corrupted Ashbringer) and Halcyon's Ascent's power ("Mesmerize on Archon" for a Wizard, and so on) got proper names too. Thanks to Ainahir (#14).
 
 **2026-10-07**
 

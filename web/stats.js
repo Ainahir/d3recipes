@@ -10,6 +10,7 @@ export const STATS = {
   Damage: ["Damage", "pct"], DamageBonusArcane: ["Arcane Damage", "pct"], DamageBonusCold: ["Cold Damage", "pct"],
   DamageBonusFire: ["Fire Damage", "pct"], DamageBonusHoly: ["Holy Damage", "pct"], DamageBonusLightning: ["Lightning Damage", "pct"],
   DamageBonusPhysical: ["Physical Damage", "pct"], DamageBonusPoison: ["Poison Damage", "pct"], DamageVsElite: ["Damage Against Elites", "pct"],
+  DamageVsMonsterTypeBeast: ["Damage Against Beasts", "pct"], DamageVsMonsterTypeUndead: ["Damage Against Undead", "pct"],
   DefenseMelee: ["Melee Damage Reduction", "pct"], DefenseMissile: ["Ranged Damage Reduction", "pct"], Dex: ["Dexterity", ""], DexInt: ["Dexterity and Intelligence", ""],
   DexVit: ["Dexterity and Vitality", ""], Experience: ["Bonus Experience per Kill", ""], FireD: ["Fire Damage (weapon)", ""], FireResist: ["Fire Resistance", ""],
   Gold: ["Gold Find", "pct"], GoldPickUpRadius: ["Gold Pickup Radius", ""], Haste: ["Attack Speed", "pct"], HatredRegen: ["Hatred Regeneration", ""],
@@ -38,10 +39,19 @@ export const HIDDEN = /^(BindOnEquip|Khalim_|SoulHarvester_|Inferior |Superior |
 const camel = (s) => s.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
 const CLASS_TAG = { DemonHunter: "Demon Hunter", WitchDoctor: "Witch Doctor" };
 
+const HALCYON = { Barbarian: "Wrath of the Berserker", Crusader: "Akarat's Champion", DemonHunter: "Vengeance", Monk: "Epiphany",
+  Necromancer: "Land of the Dead", WitchDoctor: "Big Bad Voodoo", Wizard: "Archon" };
+// a weapon's on-hit crowd-control chance (WeaponHitFear1h, WeaponHitStun2h ...) reads like the same chance on other items (HitFear, HitStun)
+const alias = (stem) => {
+  const m = /^Weapon ?Hit ?([A-Za-z]+?)[12]h$/.exec(stem);
+  return m && STATS["Hit" + m[1]] ? "Hit" + m[1] : stem;
+};
+
 export function statName(stem) {
-  if (STATS[stem]) return STATS[stem][0];
-  let m = /^Weapon Hit (\w+?)(?:2h)?$/i.exec(stem);   // on-hit crowd-control procs of weapons ("Weapon Hit Stun2h")
-  if (m) return `Chance to ${m[1]} on Hit`;
+  if (STATS[alias(stem)]) return STATS[alias(stem)][0];
+  // Halcyon's Ascent's power, one per class ("x1_deadmau5_amulet_Wizard"): enemies are mesmerized when the hero uses that class's big cooldown
+  let m = /^(?:x1_)?deadmau5_amulet_(\w+)$/.exec(stem);
+  if (m && HALCYON[m[1]]) return `Mesmerize on ${HALCYON[m[1]]} (Halcyon's Ascent)`;
   m = /^Skill_(\w+?)_(.+)$/.exec(stem);
   if (m) return camel(m[2]) + " damage";
   m = /^Ethereal_(\w+?)_(.+)$/.exec(stem);
@@ -50,7 +60,7 @@ export function statName(stem) {
 }
 
 export function isPct(stem) {
-  if (STATS[stem]) return STATS[stem][1] === "pct";
+  if (STATS[alias(stem)]) return STATS[alias(stem)][1] === "pct";
   return /^Skill_/.test(stem);
 }
 
@@ -112,7 +122,7 @@ const ABBR = {
   DexInt: "Dex+Int", DexVit: "Dex+Vit", IntVit: "Int+Vit", StrDex: "Str+Dex", StrInt: "Str+Int", StrVit: "Str+Vit", Sockets: "Socket",
   Thorns: "Thorns", Gold: "Gold Find", MF: "Magic Find",
 };
-export const statAbbr = (stem) => ABBR[stem] || statName(stem);
+export const statAbbr = (stem) => ABBR[stem] || ABBR[alias(stem)] || statName(stem);
 
 // Secondary (blue-tooltip) affixes: only shown in a result's headline when the player asked for one.
 const SECONDARY = new Set([
@@ -121,7 +131,7 @@ const SECONDARY = new Set([
   "HitBlind", "HitChill", "HitFear", "HitFreeze", "HitImmobilize", "HitKnockback", "HitSlow", "HitStun", "Bleed",
 ]);
 // every "on hit" crowd-control chance (HitFear, HitStun2h ...) and every single-element resistance is secondary too
-export const isSecondary = (stem) => SECONDARY.has(stem) || /^(Weapon )?Hit/.test(stem) || (/Resist$/.test(stem) && stem !== "ResistAll");
+export const isSecondary = (stem) => SECONDARY.has(stem) || /^(Weapon ?)?Hit/.test(stem) || (/Resist$/.test(stem) && stem !== "ResistAll");
 
 // Weapon damage lines come as two rolls: the minimum, then the spread added on top (range = min .. min + spread).
 export const RANGE_STEMS = new Set(["MinMaxDam", "ArcaneD", "ColdD", "FireD", "HolyD", "LightningD", "PoisonD", "PhysicalD"]);
