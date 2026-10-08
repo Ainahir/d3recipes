@@ -767,81 +767,60 @@ impl Search {
         let cs = self.q.cost_switch;
         let hand = move |c: usize| if c == cur { 0 } else { cs };
         let swn = move |c: usize| if c == cur { sw } else { sw.saturating_add(1) };
-        // A state another hero reached first is expanded once (the same item and seed have the same future), but a later hero's
-        // roll still registers its tooltip: on an item of no class every class reaches the same seed (the class changes which
-        // affixes are picked, not how many draws they take) with different lines.
-        // Reforge
-        for c in reforgers {
-            self.sim.hero = c;
-            let g = self.sim.reforge(item, seed);
-            let cq = if g.primal { Q::Primal } else if g.ancient { Q::Ancient } else { Q::Normal };
-            let ccost = cost + self.q.cost_r.max(1) + hand(c);
-            let new = self.admit(self.key(item as u32, g.child_seed, pc, sc, cc, swn(c), c as u8, depth + 1), ccost);
-            if new || self.need_lines(cq) {
-                let cidx = self.nodes.len() as u32;
-                self.nodes.push(NodeRec { item: item as u32, seed: g.child_seed, q: cq, pc, sc, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'R', cls: c as u8, slot, n: n0 });
-                if self.need_lines(cq) {
-                    let raw = if g.primal { self.sim.values_max(item, &g.affixes) } else { self.sim.values(item, g.child_seed, &g.affixes) };
-                    self.register(cidx, ccost, cq, item, &g.affixes, raw);
-                }
-                if new {
-                    self.push(ccost, cidx);
-                }
-            }
-        }
-        // Improve Legendary
+        // Sort moves before simulation/admission, including hero-swap costs.
+        // Stable ties retain the existing Reforge, ashes, Sanctify, Convert order
+        // and prefer the current holder within each operation.
+        let mut moves: Vec<(u64, u8, usize)> = Vec::new();
+        moves.extend(reforgers.iter().map(|&c| (self.q.cost_r.max(1) + hand(c), b'R', c)));
         if (pc as u32) < self.q.max_primalize {
-            for c in improvers.iter().copied() {
-                self.sim.hero = c;
-                let (aff, child) = self.sim.primalize(item, seed);
-                let pcost = cost + self.q.cost_p.max(1) + hand(c);
-                let new = self.admit(self.key(item as u32, child, pc + 1, sc, cc, swn(c), c as u8, depth + 1), pcost);
-                if new || self.need_lines(Q::Crafted) {
-                    let cidx = self.nodes.len() as u32;
-                    self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc: pc + 1, sc, cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'P', cls: c as u8, slot, n: n0 });
-                    if self.need_lines(Q::Crafted) {
-                        let raw = self.sim.values_max(item, &aff);
-                        self.register(cidx, pcost, Q::Crafted, item, &aff, raw);
-                    }
-                    if new {
-                        self.push(pcost, cidx);
-                    }
-                }
-            }
+            moves.extend(improvers.iter().map(|&c| (self.q.cost_p.max(1) + hand(c), b'P', c)));
         }
-        // Sanctify changes the future seed; its power replacement is not modeled.
-        // Use it as preparation, never as a final crafted-primal result.
         if (sc as u32) < self.q.max_sanctify {
-            for c in improvers.iter().copied() {
-                self.sim.hero = c;
-                let (_, child) = self.sim.sanctify(item, seed);
-                let scost = cost + self.q.cost_s.max(1) + hand(c);
-                if self.admit(self.key(item as u32, child, pc, sc.saturating_add(1), cc, swn(c), c as u8, depth + 1), scost) {
-                    let cidx = self.nodes.len() as u32;
-                    self.nodes.push(NodeRec { item: item as u32, seed: child, q: Q::Crafted, pc, sc: sc.saturating_add(1), cc, sw: swn(c), depth: depth + 1, parent: idx, op: b'S', cls: c as u8, slot, n: n0 });
-                    self.push(scost, cidx);
-                }
-            }
+            moves.extend(improvers.iter().map(|&c| (self.q.cost_s.max(1) + hand(c), b'S', c)));
         }
-        // Convert Set Item: a DIFFERENT item id, always non-Ancient, unavailable on <= 2-piece sets. The target is picked
-        // with the hero's weights, so every hero is tried; equivalent continuations keep their cheapest cost.
         if (cc as u32) < self.q.max_convert && self.sim.set_pool(item).len() > 2 {
-            for c in order.clone() {
-                self.sim.hero = c;
-                let g = self.sim.convert(item, seed);
-                let vcost = cost + self.q.cost_c.max(1) + hand(c);
-                let new = self.admit(self.key(g.target as u32, g.child_seed, pc, sc, cc + 1, swn(c), c as u8, depth + 1), vcost);
-                if new || self.need_lines(Q::Normal) {
-                    let cidx = self.nodes.len() as u32;
-                    self.nodes.push(NodeRec { item: g.target as u32, seed: g.child_seed, q: Q::Normal, pc, sc, cc: cc + 1, sw: swn(c), depth: depth + 1, parent: idx, op: b'C', cls: c as u8, slot, n: n0 });
-                    if self.need_lines(Q::Normal) {
-                        let raw = self.sim.values(g.target, g.child_seed, &g.affixes);
-                        self.register(cidx, vcost, Q::Normal, g.target, &g.affixes, raw);
-                    }
-                    if new {
-                        self.push(vcost, cidx);
-                    }
+            moves.extend(order.iter().map(|&c| (self.q.cost_c.max(1) + hand(c), b'C', c)));
+        }
+        moves.sort_by_key(|m| m.0);
+        for (step_cost, op, c) in moves {
+            self.sim.hero = c;
+            let (target, child, aff, quality, next_pc, next_sc, next_cc) = match op {
+                b'R' => {
+                    let g = self.sim.reforge(item, seed);
+                    let quality = if g.primal { Q::Primal } else if g.ancient { Q::Ancient } else { Q::Normal };
+                    (item, g.child_seed, g.affixes, quality, pc, sc, cc)
                 }
+                b'P' => {
+                    let (aff, child) = self.sim.primalize(item, seed);
+                    (item, child, aff, Q::Crafted, pc + 1, sc, cc)
+                }
+                b'S' => {
+                    let (aff, child) = self.sim.sanctify(item, seed);
+                    (item, child, aff, Q::Crafted, pc, sc.saturating_add(1), cc)
+                }
+                _ => {
+                    let g = self.sim.convert(item, seed);
+                    (g.target, g.child_seed, g.affixes, Q::Normal, pc, sc, cc + 1)
+                }
+            };
+            let next_cost = cost + step_cost;
+            let new = self.admit(self.key(target as u32, child, next_pc, next_sc, next_cc,
+                swn(c), c as u8, depth + 1), next_cost);
+            // Endpoint eligibility is independent of continuation merging.
+            // Sanctify stays preparation only; ashes can still finish a recipe.
+            let register = op != b'S' && self.need_lines(quality);
+            if new || register {
+                let cidx = self.nodes.len() as u32;
+                self.nodes.push(NodeRec { item: target as u32, seed: child, q: quality,
+                    pc: next_pc, sc: next_sc, cc: next_cc, sw: swn(c), depth: depth + 1,
+                    parent: idx, op, cls: c as u8, slot, n: n0 });
+                if register {
+                    let raw = if matches!(quality, Q::Primal | Q::Crafted) {
+                        self.sim.values_max(target, &aff)
+                    } else { self.sim.values(target, child, &aff) };
+                    self.register(cidx, next_cost, quality, target, &aff, raw);
+                }
+                if new { self.push(next_cost, cidx); }
             }
         }
         self.sim.hero = self.q.class;
@@ -1029,5 +1008,37 @@ mod cost_tracking_tests {
         assert_ne!(key,s.key(1,2,0,0,0,0,0,2)); // another step budget
         assert_eq!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,1,0,0,0,0,9));
         assert_ne!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,2,0,0,0,0,9));
+    }
+
+    #[test]
+    fn cheaper_equivalent_operation_is_generated_without_an_expensive_queue_entry() {
+        for (ashes, sanctify, expected) in [(25,1,b'S'),(1,25,b'P'),(1,1,b'P')] {
+            let d=Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+            let q=serde_json::from_value(serde_json::json!({"class":0,"slots":["Dagger"],
+                "maxpos":1,"maxsteps":2,"quality":"primal","max_primalize":255,
+                "max_sanctify":255,"max_switch":0,"cost_p":ashes,"cost_s":sanctify})).unwrap();
+            let mut s=Search::new(d,q);
+            s.expand(0,1);
+            let generated: Vec<_>=s.nodes.iter().filter(|n| n.parent==0 && matches!(n.op,b'P'|b'S')).collect();
+            assert_eq!(generated.len(),1);
+            assert_eq!(generated[0].op,expected);
+        }
+    }
+
+    #[test]
+    fn candidate_generation_orders_total_cost_including_hero_swaps() {
+        let d=Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q=serde_json::from_value(serde_json::json!({"class":0,"slots":["Ring"],
+            "maxpos":1,"maxsteps":2,"quality":"any","end_on_primalize":true,
+            "max_primalize":10,"max_sanctify":10,"switch":[1,2,4],"max_switch":2,
+            "cost_p":1,"cost_s":2,"cost_r":5,"cost_switch":10})).unwrap();
+        let mut s=Search::new(d,q);
+        s.expand(0,1);
+        let costs: Vec<_>=s.nodes.iter().filter(|n|n.parent==0).map(|n| {
+            let base=match n.op { b'R'=>5,b'P'=>1,b'S'=>2,_=>panic!("unexpected operation") };
+            base+if n.cls==0 {0} else {10}
+        }).collect();
+        assert!(costs.iter().any(|&cost|cost>=11));
+        assert!(costs.windows(2).all(|p|p[0]<=p[1]),"{costs:?}");
     }
 }
