@@ -176,9 +176,11 @@ fn primalizes() {
     let mut fails = 0;
     let mut n = 0;
     for e in g["primalize"].as_array().unwrap() {
-        let cls = u(&e["cls"]) as usize;
-        let mut sim = Sim::new(d.clone(), cls, true);
         let item = d.item_by_id[&(u(&e["item"]) as u32)];
+        // These Python vectors predate the extra cross-class draw. Replay class
+        // items as their own class; ashes_cross_class.rs covers observed cross-class rolls.
+        let cls = d.items[item].icls.unwrap_or(u(&e["cls"]) as usize);
+        let mut sim = Sim::new(d.clone(), cls, true);
         let (ex, child) = sim.primalize(item, u(&e["seed"]) as u32);
         let want: Vec<u64> = e["affixes"].as_array().unwrap().iter().map(u).collect();
         if socket_rule(&d, item) && ids(&d, &ex) != want {

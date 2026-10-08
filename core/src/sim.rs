@@ -598,6 +598,7 @@ impl Sim {
     }
 
     /// Improve Legendary (primalize_predict.primalize, MODEL B): returns (affixes, child seed).
+    /// Another class transmuting a class item spends one draw before fixed slots.
     pub fn primalize(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
         let d = self.d.clone();
         let item = &d.items[item_idx];
@@ -605,6 +606,9 @@ impl Sim {
         // on weapons no socket is ever offered, and an unresolved fixed slot (the socket group) is replaced by one primary pick made first
         self.ban_sockets = item.weapon;
         let mut rng = Rng::new(seed);
+        if matches!(item.icls, Some(c) if c != self.hero) {
+            rng.draw();
+        }
         let mut existing = Vec::with_capacity(6);
         let unresolved = self.fixed_slots(item, &mut rng, 2, &mut existing);
         rng.draw(); // one extra draw before the picks
@@ -616,8 +620,8 @@ impl Sim {
         (existing, rng.lo())
     }
 
-    /// Sanctify uses the ashes affix roll, with an extra draw before fixed slots
-    /// when another class transmutes a class item. Six-affix rolls save the seed one draw
+    /// Sanctify uses the ashes affix roll, including its cross-class draw before
+    /// fixed slots. Six-affix rolls save the seed one draw
     /// earlier; rolls with fewer affixes keep the ashes seed.
     /// Does not model the Sanctify power or which secondary affix it replaces.
     pub fn sanctify(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {

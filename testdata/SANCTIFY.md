@@ -1,5 +1,20 @@
 # Sanctification fixtures
 
+`ashes_cross_class_helm.json` records three consecutive ashes upgrades of
+Demon Hunter Helm #1 by a Barbarian, supplied from game observations on
+2026-10-08. The regression compares all six affix families without numeric
+values or predicted next seeds.
+
+`ashes_cross_class_dagger.json` records three game-observed Barbarian ashes
+upgrades of Demon Hunter Dagger #1 (Karlei's Point), a non-set five-affix item.
+It also records the reported starting item's values. The unreported common
+weapon damage affix is excluded from the ashes comparison.
+
+`ashes_cross_class_quiver.json` records three game-observed Barbarian ashes
+upgrades of Demon Hunter Quiver #1 (Dead Man's Legacy), plus its starting
+715 Dexterity. All six reported affix families are checked on each upgrade;
+"attack" in the observation is interpreted as attack speed.
+
 - `sanctify_6_affix.json`: Season 40 softcore, Demon Hunter, Helm #1, Accursed Visage.
 - `sanctify_5_affix.json`: Season 40 softcore, Demon Hunter, Dagger #1, Karlei's Point.
 
