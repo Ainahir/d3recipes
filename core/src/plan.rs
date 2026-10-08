@@ -298,8 +298,14 @@ const CHAIN_CHUNK: u32 = 32;
 /// Nodes kept before the search gives up, which bounds memory (a few hundred MB at most) however long the caller lets it run.
 const NODE_CAP: usize = 3_000_000;
 
-// item, seed, relevant operation counts, hand-overs, holder class, depth
-type StateKey = (u32, u32, u8, u8, u8, u8, u8, u16);
+// item, seed, operation counts under a real cap, hand-overs, depth
+type StateKey = (u32, u32, u8, u8, u8, u8, u16);
+
+/// Seasons with Angelic Crucibles (Light's Calling): Season 27, then every sixth season from 34 in the theme rotation
+/// (S46 on is projected from the rotation, not announced).
+pub fn sanctify_season(season: u32) -> bool {
+    season == 27 || (season >= 34 && (season - 34) % 6 == 0)
+}
 
 pub struct Search {
     d: Rc<Data>,
@@ -374,7 +380,7 @@ impl Search {
             done: false,
             capped: false,
         };
-        if s.q.max_sanctify > 0 && !(s.q.season >= 40 && (s.q.season - 40) % 6 == 0) {
+        if s.q.max_sanctify > 0 && !sanctify_season(s.q.season) {
             s.warnings.push("Sanctification is enabled for an unsupported season. These results are not supported; use them only for emulator testing.".into());
         }
         s.init_roots();
@@ -478,8 +484,8 @@ impl Search {
             }
             // Each crafter's root is expanded on its own: the steps after it are rolled by that crafter, and a route another crafter
             // starts can need one hand-over fewer (or stay inside `max_switch`) than the one that reached the same item and seed first.
-            // Each root also participates in best-cost tracking; independent crafters stay distinct.
-            let state = self.key(r.item as u32, r.seed, 0, 0, 0, sw, cls as u8, 0);
+            // The root still registers its cost, so a later step landing on it is not queued again; `run` never skips a root as stale.
+            let state = self.key(r.item as u32, r.seed, 0, 0, 0, sw, 0);
             self.admit(state, cost);
             let first = self.seen_roots.insert((state.0, state.1, state.5, cls as u8));
             if first {
@@ -489,20 +495,17 @@ impl Search {
         self.sim.hero = self.q.class;
     }
 
-    /// Equivalent continuations keep finite cap counts, holder class and depth.
-    /// Unlimited operation counters do not distinguish otherwise identical futures.
-    fn key(&self, item: u32, seed: u32, pc: u8, sc: u8, cc: u8, sw: u8, cls: u8, depth: u16) -> StateKey {
-        let remaining_steps = self.q.maxsteps.saturating_sub(depth as u32);
-        let lim = |n: u32, v: u8| {
-            // Omit a counter only when its remaining allowance covers every
-            // possible remaining step. Even a large cap must remain hard.
-            if n.saturating_sub(v as u32) >= remaining_steps { 0 } else { v }
-        };
-        (item, seed, lim(self.q.max_primalize, pc), lim(self.q.max_sanctify, sc), lim(self.q.max_convert, cc), lim(self.q.max_switch, sw), cls, depth)
+    /// Duplicate check: the cheapest arrival at a key stands in for every other one. A count with no real limit (255 or more) is not
+    /// part of the key. Neither is the hero holding the item: every hero can still do every step, so a dearer arrival held by
+    /// another hero can save at most the one hand-over it would cost the kept arrival, and keeping it would search the same future up
+    /// to seven times (measured on 256 page searches: about 3 times the nodes, for a one-hand-over saving in 4 of them).
+    fn key(&self, item: u32, seed: u32, pc: u8, sc: u8, cc: u8, sw: u8, depth: u16) -> StateKey {
+        let lim = |n: u32, v: u8| if n >= 255 { 0 } else { v };
+        (item, seed, lim(self.q.max_primalize, pc), lim(self.q.max_sanctify, sc), lim(self.q.max_convert, cc), lim(self.q.max_switch, sw), depth)
     }
 
-    /// Relax an equivalent continuation state, including its remaining caps,
-    /// holder class and step budget. Generation order must not choose the winner.
+    /// Keep the cheapest arrival at a key. Checked when a state is created AND when it leaves the queue (`run`): a parent popped first
+    /// can create a dearer child than one a later parent creates, so the order in which states are created must not pick the winner.
     fn admit(&mut self, key: StateKey, cost: u64) -> bool {
         if self.best_cost.get(&key).map_or(false, |&best| best <= cost) {
             return false;
@@ -821,7 +824,7 @@ impl Search {
             };
             let next_cost = cost + step_cost;
             let new = self.admit(self.key(target as u32, child, next_pc, next_sc, next_cc,
-                swn(c), c as u8, depth + 1), next_cost);
+                swn(c), depth + 1), next_cost);
             // Endpoint eligibility is independent of continuation merging.
             // Sanctify stays preparation only; ashes can still finish a recipe.
             let register = op != b'S' && self.need_lines(quality);
@@ -858,8 +861,9 @@ impl Search {
             }
             let Some(Reverse((cost, _, idx))) = self.heap.pop() else { break };
             let n = &self.nodes[idx as usize];
-            let key = self.key(n.item, n.seed, n.pc, n.sc, n.cc, n.sw, n.cls, n.depth);
-            if self.best_cost.get(&key).map_or(false, |&best| cost > best) {
+            let key = self.key(n.item, n.seed, n.pc, n.sc, n.cc, n.sw, n.depth);
+            // roots are exempt: each crafter's root is expanded on its own (see init_roots)
+            if n.op != b'H' && self.best_cost.get(&key).map_or(false, |&best| cost > best) {
                 // A later generation reached the same continuation more cheaply.
                 left -= 1;
                 if left == 0 {
@@ -1001,8 +1005,9 @@ mod cost_tracking_tests {
         s.heap.clear();
         s.best_cost.clear();
         s.chains.clear();
+        s.nodes[0].op = b'R'; // a root is never skipped as stale; treat it as an ordinary step
         let n = &s.nodes[0];
-        let key = s.key(n.item,n.seed,n.pc,n.sc,n.cc,n.sw,n.cls,n.depth);
+        let key = s.key(n.item,n.seed,n.pc,n.sc,n.cc,n.sw,n.depth);
         assert!(s.admit(key,100));
         s.push(100,0);
         assert!(s.admit(key,2));
@@ -1017,13 +1022,11 @@ mod cost_tracking_tests {
     #[test]
     fn state_equivalence_preserves_future_constraints() {
         let s=search(10);
-        let key=s.key(1,2,0,0,0,0,0,1);
-        assert_ne!(key,s.key(1,2,1,0,0,0,0,1)); // ashes cap can bind
-        assert_eq!(key,s.key(1,2,0,1,0,0,0,1)); // Sanctify cap cannot bind
-        assert_ne!(key,s.key(1,2,0,0,0,0,1,1)); // another holder
-        assert_ne!(key,s.key(1,2,0,0,0,0,0,2)); // another step budget
-        assert_eq!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,1,0,0,0,0,9));
-        assert_ne!(s.key(1,2,0,0,0,0,0,9),s.key(1,2,2,0,0,0,0,9));
+        let key=s.key(1,2,0,0,0,0,1);
+        assert_ne!(key,s.key(1,2,1,0,0,0,1)); // ashes cap (2) can bind
+        assert_eq!(key,s.key(1,2,0,1,0,0,1)); // Sanctify cap 255 = no limit
+        assert_ne!(key,s.key(1,2,0,0,0,1,1)); // hand-over cap (2) can bind
+        assert_ne!(key,s.key(1,2,0,0,0,0,2)); // another step budget
     }
 
     #[test]

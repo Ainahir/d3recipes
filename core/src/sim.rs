@@ -600,31 +600,27 @@ impl Sim {
     /// Improve Legendary (primalize_predict.primalize, MODEL B): returns (affixes, child seed).
     /// Another class transmuting a class item spends one draw before fixed slots.
     pub fn primalize(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
-        let d = self.d.clone();
-        let item = &d.items[item_idx];
-        self.set_class(item);
-        // on weapons no socket is ever offered, and an unresolved fixed slot (the socket group) is replaced by one primary pick made first
-        self.ban_sockets = item.weapon;
-        let mut rng = Rng::new(seed);
-        if matches!(item.icls, Some(c) if c != self.hero) {
-            rng.draw();
-        }
-        let mut existing = Vec::with_capacity(6);
-        let unresolved = self.fixed_slots(item, &mut rng, 2, &mut existing);
-        rng.draw(); // one extra draw before the picks
-        let lead = if item.weapon { unresolved } else { 0 };
-        self.force_socket = item.worn;
-        self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
-        self.force_socket = false;
-        self.ban_sockets = false;
+        let (existing, rng) = self.primal_roll(item_idx, seed);
         (existing, rng.lo())
     }
 
-    /// Sanctify uses the ashes affix roll, including its cross-class draw before
-    /// fixed slots. Six-affix rolls save the seed one draw
-    /// earlier; rolls with fewer affixes keep the ashes seed.
-    /// Does not model the Sanctify power or which secondary affix it replaces.
+    /// Sanctify (Angelic Crucible) rolls exactly like Improve Legendary. When that roll has six affixes the seasonal power replaces
+    /// the last secondary, whose draw is not taken: the child seed is the state one draw earlier. With fewer affixes the child seed
+    /// is the ashes one. The power itself is random each time and not modelled.
     pub fn sanctify(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
+        let (existing, rng) = self.primal_roll(item_idx, seed);
+        if existing.len() != 6 {
+            return (existing, rng.lo());
+        }
+        let mut prev = Rng::new(seed);
+        for _ in 0..rng.n.saturating_sub(1) {
+            prev.draw();
+        }
+        (existing, prev.lo())
+    }
+
+    /// The Improve Legendary / Sanctify affix roll: the affixes and the generator after the last draw.
+    fn primal_roll(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, Rng) {
         let d = self.d.clone();
         let item = &d.items[item_idx];
         self.set_class(item);
@@ -642,17 +638,7 @@ impl Sim {
         self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
         self.force_socket = false;
         self.ban_sockets = false;
-        // The seasonal power replaces an ordinary affix only when all six slots
-        // are occupied. Five-affix items keep the same next seed as ashes.
-        if existing.len() != 6 {
-            return (existing, rng.lo());
-        }
-        // Keep the affix roll intact; replay to the penultimate state for the next seed.
-        let mut next_rng = Rng::new(seed);
-        for _ in 0..rng.n.saturating_sub(1) {
-            next_rng.draw();
-        }
-        (existing, next_rng.lo())
+        (existing, rng)
     }
 
     /// The rolled numbers in game order (reforge.py Sim.values); the cost pseudo-attribute is not in the specs.

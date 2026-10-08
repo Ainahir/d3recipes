@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=sanctify-crucible-icon-1";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap } from "./recipe.js?v=sanctify-crucible-icon-1";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=sanctify-crucible-icon-1";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -278,8 +278,11 @@ let run = null;   // the run in flight, or the last one: {base, deadline, i, res
 // The request the form currently describes (see recipe.js for the shape).
 function readRequest() {
   const num = (id) => Math.max(0, Math.round(+$(id).value || 0));
+  const sa = $("csa").value.trim(), sn = $("sn").value.trim();
   return {
-    sa: $("csa").value, sn: $("sn").value.trim(),
+    // left out (undefined) when they are the defaults, so links and saved searches follow the season's default cap
+    sa: sa === "" || +sa === +DEFAULT_SANCTIFY_PRICE ? undefined : sa,
+    sn: sn === defaultSanctifyCap(contextNow().season) ? undefined : sn,
     c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, clampMin(w.stem, String(w.min))]), po: $("po").checked,
     p: ["cc", "ch", "cr", "cp"].map((id) => $(id).value), f: num("floor"), n: Math.max(1, Math.round(+$("top").value || 1)),
     // most hand-overs to another class during the cube steps ("" = no limit), and the cost of each hand-over
@@ -306,7 +309,7 @@ function baseQuery(req, item, season, hc) {
     craft_any: item.classes.length > 1,
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
     max_sanctify: (req.sn ?? defaultSanctifyCap(season)) === "" ? 255 : Math.min(254, Math.max(0, Math.round(+(req.sn ?? defaultSanctifyCap(season)) || 0))),
-    cost_s: cost(req.sa ?? "1"),
+    cost_s: cost(req.sa ?? DEFAULT_SANCTIFY_PRICE),
     cost_h: cost(ch), cost_r: cost(cr), cost_p: cost(cp), cost_c: cost(cc), top: 4, min_frac: Math.min(1, req.f / 100),
     wants: req.w.map(([stem, m]) => {
       const min = m === "" ? null : (isPct(stem) ? +m / 100 : +m);
@@ -444,8 +447,8 @@ async function applyLink(parsed) {
   ["cc", "ch", "cr", "cp"].forEach((id, k) => { $(id).value = req.p[k]; });
   $("xn").value = req.xn;
   $("cn").value = req.cn ?? DEFAULT_CONVERTS;
-  $("csa").value = req.sa ?? "1"; $("sn").value = req.sn ?? defaultSanctifyCap(season);
-  sanctifyCapEdited = true;
+  $("csa").value = req.sa ?? DEFAULT_SANCTIFY_PRICE; $("sn").value = req.sn ?? defaultSanctifyCap(season);
+  sanctifyCapEdited = req.sn != null;
   updateSanctifyControls();
   $("cs").value = req.xs;
   $("floor").value = String(req.f);

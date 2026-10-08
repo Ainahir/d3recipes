@@ -139,15 +139,17 @@ export const DEFAULT_PRICES = ["0.75", "1", "5", "25"];
 export const DEFAULT_SWITCH = "1";   // swap cost
 export const DEFAULT_SWAPS = "4";    // hand-overs during the cube steps ("" = no limit)
 export const DEFAULT_CONVERTS = "4"; // Convert Set Item steps per recipe ("" = no limit)
-export const supportsSanctify = (season) => season >= 40 && (season - 40) % 6 === 0;
+// Light's Calling (Angelic Crucibles): Season 27, then every sixth season from 34 in the theme rotation (S46 on is projected, not announced)
+export const supportsSanctify = (season) => season === 27 || (season >= 34 && (season - 34) % 6 === 0);
 export const defaultSanctifyCap = (season) => supportsSanctify(season) ? "2" : "0";
+export const DEFAULT_SANCTIFY_PRICE = "5"; // the Reforge price
 
 export function requestHash(req, season, hc) {
   const e = encodeURIComponent;
   const w = req.w.map(([s, m]) => e(s) + (m === "" || m == null ? "" : "~" + e(m))).join(",");
   // the swap settings appear in the link only when they differ from the defaults, so older links and saved searches stay the same
-  const cap = req.sn ?? defaultSanctifyCap(season);
-  const sanctify = (req.sa ?? "1") !== "1" || cap !== "2" ? `&sa=${e(req.sa ?? "1")}&sn=${e(cap)}` : "";
+  // Sanctification: the price only when it is not the default, the cap only when it is not the season's default (`sn` absent = that default)
+  const sanctify = (req.sa != null ? `&sa=${e(req.sa)}` : "") + (req.sn != null ? `&sn=${e(req.sn)}` : "");
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
   const po = req.po ? "&po=1" : "";
@@ -166,13 +168,12 @@ export function parseRequestHash(hash) {
   const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); return [d(s), d(v)]; });
   const p = (q.get("p") || "").split(",").map(d);
   const season = Math.max(1, Math.round(num("s") || 40));
-  const defaultCap = defaultSanctifyCap(season);
   return {
     req: {
       po: q.get("po") === "1",
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
-      sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : "1",
-      sn: q.has("sn") ? (q.get("sn") === "" ? "" : /^\d+$/.test(q.get("sn")) ? q.get("sn") : defaultCap) : defaultCap,
+      sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : undefined,
+      sn: q.has("sn") && (q.get("sn") === "" || /^\d+$/.test(q.get("sn"))) ? q.get("sn") : undefined,
       cn: q.has("cn") ? (q.get("cn") === "" ? "" : /^\d+$/.test(q.get("cn")) ? q.get("cn") : DEFAULT_CONVERTS) : DEFAULT_CONVERTS,
       xn: q.has("xn") ? (q.get("xn") === "" ? "" : /^\d+$/.test(q.get("xn")) ? q.get("xn") : DEFAULT_SWAPS) : DEFAULT_SWAPS,
       // a finite cost the engine can take in hundredths (a crafted `xs=Infinity` would reach it as null)
@@ -185,7 +186,7 @@ export function parseRequestHash(hash) {
 export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}` +
   ((req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `/${req.xn ?? DEFAULT_SWAPS}~${req.xs ?? DEFAULT_SWITCH}` : "") +
   ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "") +
-  ((req.sa ?? "1") !== "1" || (req.sn ?? "2") !== "2" ? `/s${req.sa ?? "1"}/${req.sn ?? "2"}` : "") + (req.po ? "/po" : "");
+  (req.sa != null ? `/sa${req.sa}` : "") + (req.sn != null ? `/sn${req.sn}` : "") + (req.po ? "/po" : "");
 
 const SAVED_KEY = "d3r-saved";
 export function savedList() {
