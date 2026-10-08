@@ -72,6 +72,7 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 - Fixed Improve Legendary by a hero of another class on a class item (a Demon Hunter upgrading a Crusader's belt): it takes one extra draw, as Reforge and Convert Set Item already did, so the steps after it come out differently. Confirmed in game, the last two blind: a Demon Hunter's helm, dagger and quiver upgraded by a Barbarian, a Vigilante Belt (eight steps) and a Band of Might (seven). The prepared builds are regenerated with it: 6 softcore and 5 hardcore rows changed.
 - Fixed custom search, the prepared builds and the salvage page sometimes missing a cheaper recipe when two routes led to the same item: the first one found won even when the other was cheaper. Most of the salvage page got cheaper (29 of 88 entries), and a few searches did too.
 - Thanks to Ainahir for all of it, and for the care that went into it: every rule above came with in-game tests on a whole sequence of results, the cross-class Improve Legendary bug was found and pinned down along the way, and details like the crucible's own material icon were not forgotten (#7).
+- Hovering over **Most Sanctifications** now explains it: 0 turns Sanctification off whatever its cost, and an empty box means no limit. Thanks to Ainahir (#15).
 
 **2026-10-07**
 

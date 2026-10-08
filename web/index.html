@@ -283,7 +283,7 @@
         </div>
         <p class="small" style="margin:10px 0 0">How far the search may branch. Converts and hero swaps cost little, so each one more can find cheaper recipes but makes the search much slower. Leave a box empty for no limit. A hero swap hands the item to another class for a cube step: the item keeps its seed and the hero's class changes what it rolls. An item of no class may also be created by another class (its Hope of Cain picks and rolls differently), which counts as a hero swap; a class item is always created by the class chosen above. The Mystic may be any class.</p>
         <div class="opts">
-          <div id="sanctifyLimit"><label for="sn">Most Sanctifications</label><input id="sn" type="number" min="0" step="1" value="2" placeholder="no limit" aria-describedby="sanctifyWarning"></div>
+          <div id="sanctifyLimit"><label for="sn" title="Most Sanctification (Angelic Crucible) steps in one recipe. 0 turns Sanctification off, whatever its cost; leave empty for no limit. The default is 2 in seasons with Angelic Crucibles and 0 in others.">Most Sanctifications</label><input id="sn" type="number" min="0" step="1" value="2" placeholder="no limit" aria-describedby="sanctifyWarning"></div>
           <div><label for="cn" title="Most Convert Set Item steps in one recipe. Leave empty for no limit.">Most converts</label><input id="cn" type="number" min="0" step="1" value="4" placeholder="no limit"></div>
           <div><label for="xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Most hero swaps</label><input id="xn" type="number" min="0" step="1" value="4" placeholder="no limit"></div>
         </div>
