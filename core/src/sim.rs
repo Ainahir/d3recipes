@@ -174,7 +174,7 @@ pub struct Sim {
     pub eligible: bool,
     pub ilvl: u32,
     pub quality: u32,
-    cls: usize,
+    pub(crate) cls: usize,
     /// primal weapons never roll a socket (set by `primalize` for weapons)
     ban_sockets: bool,
     base: HashMap<(usize, usize, bool), Rc<BaseElig>>,
@@ -190,7 +190,7 @@ impl Sim {
         Sim { d, hero, eligible, ilvl: 70, quality: 9, cls: hero, ban_sockets: false, base: HashMap::new(), twins: HashMap::new(), force_socket: false }
     }
 
-    fn set_class(&mut self, it: &Item) {
+    pub(crate) fn set_class(&mut self, it: &Item) {
         self.cls = it.icls.unwrap_or(self.hero);
     }
 
@@ -216,7 +216,7 @@ impl Sim {
         false
     }
 
-    fn eligible_base(&self, item: &Item, ai: usize, skip_level: bool, skip_quality: bool, wild: bool) -> bool {
+    pub(crate) fn eligible_base(&self, item: &Item, ai: usize, skip_level: bool, skip_quality: bool, wild: bool) -> bool {
         let a = &self.d.affixes[ai];
         if a.legacy_socket || (self.ban_sockets && a.socket) {
             return false;
@@ -494,6 +494,17 @@ impl Sim {
                         out.push(ai);
                     }
                 }
+                // resolve_slot's last pass ignores the item type, but only when no member fits it (a Stone of Jordan's
+                // maximum-resource slot holds only affixes typed for other items), so the class's members join then.
+                if !members.iter().any(|&ai| self.eligible_base(item, ai, true, true, true) && d.affixes[ai].tier <= self.ilvl) {
+                    let last: Vec<usize> = members.iter().copied().filter(|&ai| {
+                        let a = &d.affixes[ai];
+                        (a.g7c == gid || a.g80 == gid) && a.tier <= self.ilvl && !(a.cls != U && a.cls as usize != self.cls) && a.weight[self.cls] >= 1
+                    }).collect();
+                    // only the highest tier is ever taken (a Mana jewel's line is tier 1)
+                    let top = last.iter().map(|&ai| d.affixes[ai].tier).max();
+                    out.extend(last.into_iter().filter(|&ai| Some(d.affixes[ai].tier) == top));
+                }
             }
         }
         out.sort_unstable();
@@ -559,7 +570,9 @@ impl Sim {
     /// Convert Set Item: pool = set-mates minus the source, weighted by w356*cmult[class] (the
     /// SAME field Hope of Cain uses), one MWC step past the Reforge-family start point (x0) picks the target; that
     /// SAME x0 seeds the target's stat generation (drop_item, unmodified) and becomes its own future seed (lo(x0),
-    /// the same pattern Hope of Cain uses for its own drops). Caller must check `set_pool(item_idx).len() > 2`
+    /// the same pattern Hope of Cain uses for its own drops). A hero of another class than a class item's spends one extra
+    /// draw after the pick, as Hope of Cain does (chain_roots), and the item is built from and seeded by the state after it
+    /// (played: a Demon Hunter converting a Crusader's Spaulders of Valor). Caller must check `set_pool(item_idx).len() > 2`
     /// first (the recipe is unavailable on 2-piece sets) -- panics on an empty pool otherwise.
     pub fn convert(&mut self, item_idx: usize, seed: u32) -> Converted {
         let d = self.d.clone();
@@ -579,19 +592,44 @@ impl Sim {
                 break;
             }
         }
-        let x0_lo = x0 as u32;
+        let x0 = if matches!(item.icls, Some(c) if c != self.hero) { step(x0) } else { x0 };
         let affixes = self.drop_item(target, x0, false, false);
-        Converted { target, affixes, child_seed: x0_lo }
+        Converted { target, affixes, child_seed: x0 as u32 }
     }
 
     /// Improve Legendary (primalize_predict.primalize, MODEL B): returns (affixes, child seed).
+    /// Another class transmuting a class item spends one draw before fixed slots.
     pub fn primalize(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
+        let (existing, rng) = self.primal_roll(item_idx, seed);
+        (existing, rng.lo())
+    }
+
+    /// Sanctify (Angelic Crucible) rolls exactly like Improve Legendary. When that roll has six affixes the seasonal power replaces
+    /// the last secondary, whose draw is not taken: the child seed is the state one draw earlier. With fewer affixes the child seed
+    /// is the ashes one. The power itself is random each time and not modelled.
+    pub fn sanctify(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, u32) {
+        let (existing, rng) = self.primal_roll(item_idx, seed);
+        if existing.len() != 6 {
+            return (existing, rng.lo());
+        }
+        let mut prev = Rng::new(seed);
+        for _ in 0..rng.n.saturating_sub(1) {
+            prev.draw();
+        }
+        (existing, prev.lo())
+    }
+
+    /// The Improve Legendary / Sanctify affix roll: the affixes and the generator after the last draw.
+    fn primal_roll(&mut self, item_idx: usize, seed: u32) -> (Vec<usize>, Rng) {
         let d = self.d.clone();
         let item = &d.items[item_idx];
         self.set_class(item);
         // on weapons no socket is ever offered, and an unresolved fixed slot (the socket group) is replaced by one primary pick made first
         self.ban_sockets = item.weapon;
         let mut rng = Rng::new(seed);
+        if matches!(item.icls, Some(c) if c != self.hero) {
+            rng.draw();
+        }
         let mut existing = Vec::with_capacity(6);
         let unresolved = self.fixed_slots(item, &mut rng, 2, &mut existing);
         rng.draw(); // one extra draw before the picks
@@ -600,7 +638,7 @@ impl Sim {
         self.picks(item_idx, &mut rng, 2, true, lead, &mut existing);
         self.force_socket = false;
         self.ban_sockets = false;
-        (existing, rng.lo())
+        (existing, rng)
     }
 
     /// The rolled numbers in game order (reforge.py Sim.values); the cost pseudo-attribute is not in the specs.

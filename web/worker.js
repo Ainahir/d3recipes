@@ -57,7 +57,7 @@ onmessage = (e) => {
   if (m.type === "search") { job = m.id; search(m.id, m.query, m.budgetMs); }
   else if (m.type === "cancel") { job = -1; }
   else if (m.type === "stems") {
-    try { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)) }); }
+    try { postMessage({ type: "stems", key: m.key, stems: JSON.parse(engine.stems(m.class, m.slot, m.item || 0)), max: JSON.parse(engine.stat_max(m.class, m.slot, m.item || 0)) }); }
     catch (e) { postMessage({ type: "error", key: m.key, message: String(e) }); }
   }
 };

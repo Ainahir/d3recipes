@@ -50,6 +50,8 @@
   .page { max-width: 1120px; margin: 0 auto; padding: 16px; }
   h1 { margin: 0; }
   h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .h2row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .po { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; }
   a { color: var(--accent); }
   .card {
     background-color: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px;
@@ -239,6 +241,7 @@
     </div>
   </section>
 
+  <p id="sanctifyAvailable" class="small" role="status" hidden>Sanctification is available in this season.</p>
 </header>
   <nav id="nav" aria-label="Prepared builds and custom search"></nav>
   <main id="content">
@@ -259,7 +262,7 @@
     </section>
 
     <section class="card">
-      <h2>2. Stats you want</h2>
+      <div class="h2row"><h2>2. Stats you want</h2><label class="po" title="Only show recipes that end on a natural primal. Crafted primals (Improve Legendary), ancients and plain legendaries are skipped, so the search spends its whole time limit on natural primals."><input id="po" type="checkbox"> Primal only</label></div>
       <div id="chips" class="chips"></div>
       <input id="find" type="text" placeholder="Search stats: crit, cooldown, dexterity, multishot&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="pick">
       <div id="pick" class="pick" role="listbox" hidden></div>
@@ -271,7 +274,8 @@
           <div><label for="cc">Convert Set Item</label><input id="cc" type="number" min="0.01" step="any" value="0.75"></div>
           <div><label for="ch">Hope of Cain</label><input id="ch" type="number" min="0.01" step="any" value="1"></div>
           <div><label for="cr">Reforge</label><input id="cr" type="number" min="0.01" step="any" value="5"></div>
-          <div><label for="cp">Improve Legendary</label><input id="cp" type="number" min="0.01" step="any" value="25"></div>
+          <div id="sanctifyCost"><label for="csa">Sanctification</label><input id="csa" type="number" min="0.01" step="any" value="5"></div>
+          <div><label for="cp" title="Improve Legendary (100 Primordial Ashes)">Ashes</label><input id="cp" type="number" min="0.01" step="any" value="25"></div>
           <div><label for="cs" title="Relative cost of handing the item to a hero of another class (a throwaway level 1 will do), in the same units as the costs before it. Higher means fewer swaps.">Hero swap</label><input id="cs" type="number" min="0" step="any" value="1"></div>
         </div>
         <div class="opts">
@@ -279,11 +283,13 @@
           <div><label for="top">Recipes shown</label><input id="top" type="number" min="1" max="6" value="1"></div>
           <div><label for="secs">Time limit (s)</label><input id="secs" type="number" min="1" max="120" value="15"></div>
         </div>
-        <p class="small" style="margin:10px 0 0">How far the search may branch. Converts and hero swaps cost little, so each one more can find cheaper recipes but makes the search much slower. Leave a box empty for no limit. A hero swap hands the item to another class for a cube step: the item keeps its seed and the hero's class changes what it rolls. The item is always created by the class chosen above, and the Mystic may be any class.</p>
+        <p class="small" style="margin:10px 0 0">How far the search may branch. Converts and hero swaps cost little, so each one more can find cheaper recipes but makes the search much slower. Leave a box empty for no limit. A hero swap hands the item to another class for a cube step: the item keeps its seed and the hero's class changes what it rolls. An item of no class may also be created by another class (its Hope of Cain picks and rolls differently), which counts as a hero swap; a class item is always created by the class chosen above. The Mystic may be any class.</p>
         <div class="opts">
-          <div><label for="cn" title="Most Convert Set Item steps in one recipe. Leave empty for no limit.">Most converts</label><input id="cn" type="number" min="0" step="1" value="2" placeholder="no limit"></div>
-          <div><label for="xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Most hero swaps</label><input id="xn" type="number" min="0" step="1" value="0" placeholder="no limit"></div>
+          <div id="sanctifyLimit"><label for="sn" title="Most Sanctification (Angelic Crucible) steps in one recipe. 0 turns Sanctification off, whatever its cost; leave empty for no limit. The default is 2 in seasons with Angelic Crucibles and 0 in others.">Most Sanctifications</label><input id="sn" type="number" min="0" step="1" value="2" placeholder="no limit" aria-describedby="sanctifyWarning"></div>
+          <div><label for="cn" title="Most Convert Set Item steps in one recipe. Leave empty for no limit.">Most converts</label><input id="cn" type="number" min="0" step="1" value="4" placeholder="no limit"></div>
+          <div><label for="xn" title="Most hand-overs to another class during the cube steps of one recipe. Leave empty for no limit. A hand-over just for the Mystic does not count.">Most hero swaps</label><input id="xn" type="number" min="0" step="1" value="4" placeholder="no limit"></div>
         </div>
+        <p id="sanctifyWarning" class="warn" role="status" hidden>Sanctification is enabled for an unsupported season. These results are not supported; use them only for emulator testing.</p>
       </details>
     </section>
 
@@ -365,8 +371,8 @@
 
 </div>
 <script defer src="analytics.js"></script>
-<script type="module" src="builds.js?v=build-review-fixes-1"></script>
-<script type="module" src="app.js?v=build-table-1"></script>
+<script type="module" src="builds.js?v=d9da5bc024"></script>
+<script type="module" src="app.js?v=d9da5bc024"></script>
 <script type="module" src="create-build.js?v=build-review-fixes-1"></script>
 <script type="module" src="search-builds.js?v=natural-primal-only-1"></script>
 </body>

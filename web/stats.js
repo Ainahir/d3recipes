@@ -10,6 +10,7 @@ export const STATS = {
   Damage: ["Damage", "pct"], DamageBonusArcane: ["Arcane Damage", "pct"], DamageBonusCold: ["Cold Damage", "pct"],
   DamageBonusFire: ["Fire Damage", "pct"], DamageBonusHoly: ["Holy Damage", "pct"], DamageBonusLightning: ["Lightning Damage", "pct"],
   DamageBonusPhysical: ["Physical Damage", "pct"], DamageBonusPoison: ["Poison Damage", "pct"], DamageVsElite: ["Damage Against Elites", "pct"],
+  DamageVsMonsterTypeBeast: ["Damage Against Beasts", "pct"], DamageVsMonsterTypeUndead: ["Damage Against Undead", "pct"],
   DefenseMelee: ["Melee Damage Reduction", "pct"], DefenseMissile: ["Ranged Damage Reduction", "pct"], Dex: ["Dexterity", ""], DexInt: ["Dexterity and Intelligence", ""],
   DexVit: ["Dexterity and Vitality", ""], Experience: ["Bonus Experience per Kill", ""], FireD: ["Fire Damage (weapon)", ""], FireResist: ["Fire Resistance", ""],
   Gold: ["Gold Find", "pct"], GoldPickUpRadius: ["Gold Pickup Radius", ""], Haste: ["Attack Speed", "pct"], HatredRegen: ["Hatred Regeneration", ""],
@@ -38,10 +39,19 @@ export const HIDDEN = /^(BindOnEquip|Khalim_|SoulHarvester_|Inferior |Superior |
 const camel = (s) => s.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
 const CLASS_TAG = { DemonHunter: "Demon Hunter", WitchDoctor: "Witch Doctor" };
 
+const HALCYON = { Barbarian: "Wrath of the Berserker", Crusader: "Akarat's Champion", DemonHunter: "Vengeance", Monk: "Epiphany",
+  Necromancer: "Land of the Dead", WitchDoctor: "Big Bad Voodoo", Wizard: "Archon" };
+// a weapon's on-hit crowd-control chance (WeaponHitFear1h, WeaponHitStun2h ...) reads like the same chance on other items (HitFear, HitStun)
+const alias = (stem) => {
+  const m = /^Weapon ?Hit ?([A-Za-z]+?)[12]h$/.exec(stem);
+  return m && STATS["Hit" + m[1]] ? "Hit" + m[1] : stem;
+};
+
 export function statName(stem) {
-  if (STATS[stem]) return STATS[stem][0];
-  let m = /^Weapon Hit (\w+?)(?:2h)?$/i.exec(stem);   // on-hit crowd-control procs of weapons ("Weapon Hit Stun2h")
-  if (m) return `Chance to ${m[1]} on Hit`;
+  if (STATS[alias(stem)]) return STATS[alias(stem)][0];
+  // Halcyon's Ascent's power, one per class ("x1_deadmau5_amulet_Wizard"): enemies are mesmerized when the hero uses that class's big cooldown
+  let m = /^(?:x1_)?deadmau5_amulet_(\w+)$/.exec(stem);
+  if (m && HALCYON[m[1]]) return `Mesmerize on ${HALCYON[m[1]]} (Halcyon's Ascent)`;
   m = /^Skill_(\w+?)_(.+)$/.exec(stem);
   if (m) return camel(m[2]) + " damage";
   m = /^Ethereal_(\w+?)_(.+)$/.exec(stem);
@@ -50,19 +60,29 @@ export function statName(stem) {
 }
 
 export function isPct(stem) {
-  if (STATS[stem]) return STATS[stem][1] === "pct";
+  if (STATS[alias(stem)]) return STATS[alias(stem)][1] === "pct";
   return /^Skill_/.test(stem);
 }
 
-// The game shows these life stats rounded DOWN to a multiple of 16 (seen in game: Life per Hit 21,967 -> 21,952 and Life Regeneration
-// 5,267 -> 5,264). Only stats seen to do it are listed.
-const ROUND_DOWN_16 = new Set(["HitLife", "Regen"]);
+// The game shows these life stats cut down to their first 11 significant bits (a multiple of 2^(e-10) for a value in [2^e, 2^(e+1))): a
+// multiple of 2 from 2,048, of 4 from 4,096, of 8 from 8,192, of 16 from 16,384, of 32 from 32,768. Seen in game, model -> screen: Life per Hit
+// 27,348 -> 27,344, 21,967 -> 21,952, 17,997 -> 17,984, 8,813 -> 8,808, 8,796 -> 8,792; Life Regeneration 5,267 -> 5,264, 7,427 -> 7,424, and
+// 4,888 stays 4,888; Life after Each Kill 17,385 -> 17,376 and 11,590 -> 11,584 (LEDGER V34, V112, V116, V122, V160). A plain "multiple of 16"
+// misses the three values under 16,384. Life per Fury Spent (2,435 -> 2,434) is one observation. Not every big stat does it: Thorns 6,543 and a
+// weapon's 2,325 damage show exact. Only stats seen to do it are listed.
+const CUT_TO_11_BITS = new Set(["HitLife", "Regen", "KillLife", "FuryHeals"]);
+
+export function cutTo11Bits(v) {
+  if (!(v >= 2048)) return v;
+  const step = 2 ** (Math.floor(Math.log2(v)) - 10);
+  return Math.floor(v / step) * step;
+}
 
 export function fmtValue(stem, v) {
   if (stem === "Sockets" || stem === "Indestructible") return "";
   if (Number.isNaN(v)) return "?";
   if (isPct(stem)) return (Math.round(v * 1000) / 10).toString() + "%";
-  if (ROUND_DOWN_16.has(stem)) v = Math.floor(v / 16) * 16;
+  if (CUT_TO_11_BITS.has(stem)) v = cutTo11Bits(v);
   return Math.round(v).toLocaleString("en-US");
 }
 
@@ -75,12 +95,14 @@ export const SLOT_NAMES = {
   Axe2H: "Axe (2H)", Mace: "Mace (1H)", Mace2H: "Mace (2H)", Dagger: "Dagger", Spear: "Spear", Polearm: "Polearm", Staff: "Staff", Wand: "Wand",
   Bow: "Bow", Crossbow: "Crossbow", HandXbow: "Hand Crossbow", Scythe1H: "Scythe (1H)", Scythe2H: "Scythe (2H)", Flail1H: "Flail (1H)",
   Flail2H: "Flail (2H)", MightyWeapon1H: "Mighty Weapon (1H)", MightyWeapon2H: "Mighty Weapon (2H)", CeremonialDagger: "Ceremonial Knife", FistWeapon: "Fist Weapon", MightyBelt: "Mighty Belt", Phylactery: "Phylactery", Daibo: "Daibo",
+  TemplarRelic: "Templar Relic", EnchantressFocus: "Enchantress Focus", ScoundrelToken: "Scoundrel Token",
 };
 
 export const RECIPES = {
   H: { "Death's Breath": 25, "Reusable Parts": 50, "Arcane Dust": 50, "Veiled Crystal": 50 },
   R: { "Khanduran Rune": 5, "Caldeum Nightshade": 5, "Arreat War Tapestry": 5, "Corrupted Angel Flesh": 5, "Westmarch Holy Water": 5, "Forgotten Soul": 50 },
   P: { "Primordial Ashes": 100 },
+  S: { "Angelic Crucible": 1 },
   C: { "Forgotten Soul": 10, "Death's Breath": 10 },
 };
 
@@ -100,7 +122,7 @@ const ABBR = {
   DexInt: "Dex+Int", DexVit: "Dex+Vit", IntVit: "Int+Vit", StrDex: "Str+Dex", StrInt: "Str+Int", StrVit: "Str+Vit", Sockets: "Socket",
   Thorns: "Thorns", Gold: "Gold Find", MF: "Magic Find",
 };
-export const statAbbr = (stem) => ABBR[stem] || statName(stem);
+export const statAbbr = (stem) => ABBR[stem] || ABBR[alias(stem)] || statName(stem);
 
 // Secondary (blue-tooltip) affixes: only shown in a result's headline when the player asked for one.
 const SECONDARY = new Set([
@@ -109,7 +131,7 @@ const SECONDARY = new Set([
   "HitBlind", "HitChill", "HitFear", "HitFreeze", "HitImmobilize", "HitKnockback", "HitSlow", "HitStun", "Bleed",
 ]);
 // every "on hit" crowd-control chance (HitFear, HitStun2h ...) and every single-element resistance is secondary too
-export const isSecondary = (stem) => SECONDARY.has(stem) || /^(Weapon )?Hit/.test(stem) || (/Resist$/.test(stem) && stem !== "ResistAll");
+export const isSecondary = (stem) => SECONDARY.has(stem) || /^(Weapon ?)?Hit/.test(stem) || (/Resist$/.test(stem) && stem !== "ResistAll");
 
 // Weapon damage lines come as two rolls: the minimum, then the spread added on top (range = min .. min + spread).
 export const RANGE_STEMS = new Set(["MinMaxDam", "ArcaneD", "ColdD", "FireD", "HolyD", "LightningD", "PoisonD", "PhysicalD"]);
@@ -135,4 +157,5 @@ export const MATERIAL_ICONS = {
   "Corrupted Angel Flesh": { file: "corrupted-angel-flesh.webp", abbr: "CA", color: "#b05a6a" },
   "Westmarch Holy Water": { file: "westmarch-holy-water.webp", abbr: "HW", color: "#3f86a8" },
   "Primordial Ashes": { file: "primordial-ashes.webp", abbr: "PA", color: "#c2562b" },
+  "Angelic Crucible": { file: "angelic-crucible.webp", abbr: "AC", color: "#c9b471" },
 };

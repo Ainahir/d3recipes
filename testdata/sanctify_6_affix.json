@@ -1,0 +1,481 @@
+{
+  "affix_count": 6,
+  "class": "DemonHunter",
+  "hardcore": false,
+  "identifier": "S40-SC-DH-HELM-1",
+  "item": "Accursed Visage",
+  "item_id": 2301724298,
+  "notes": "Ordinary affixes only; Sanctify power replacement is not modeled. Percentages are fractions (0.15 = 15%); Sockets value 0 indicates presence. Built-in item power/damage lines are not counted as affixes.",
+  "outcomes": [
+    {
+      "input_seed": 2438299784,
+      "iteration": 1,
+      "next_seed": 2496802170,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Multishot",
+          "value": 0.15
+        },
+        {
+          "stat": "HitFear",
+          "value": 0.0509
+        },
+        {
+          "stat": "Thorns",
+          "value": 3500.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 2496802170,
+      "iteration": 2,
+      "next_seed": 2536406836,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Life",
+          "value": 0.15
+        },
+        {
+          "stat": "Skill_DemonHunter_ElementalArrow",
+          "value": 0.15
+        },
+        {
+          "stat": "Thorns",
+          "value": 3500.0
+        },
+        {
+          "stat": "FireResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 2536406836,
+      "iteration": 3,
+      "next_seed": 1696829578,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Impale",
+          "value": 0.15
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "GoldPickUpRadius",
+          "value": 2.0
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1696829578,
+      "iteration": 4,
+      "next_seed": 1263350337,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Multishot",
+          "value": 0.15
+        },
+        {
+          "stat": "DR",
+          "value": 775.0
+        },
+        {
+          "stat": "PhysicalResist",
+          "value": 210.0
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1263350337,
+      "iteration": 5,
+      "next_seed": 1842757580,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_ElementalArrow",
+          "value": 0.15
+        },
+        {
+          "stat": "CriticalChance",
+          "value": 0.06
+        },
+        {
+          "stat": "PoisonResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Gold",
+          "value": 0.35
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1842757580,
+      "iteration": 6,
+      "next_seed": 2454240278,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "GoldPickUpRadius",
+          "value": 2.0
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 2454240278,
+      "iteration": 7,
+      "next_seed": 1834650807,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "DR",
+          "value": 775.0
+        },
+        {
+          "stat": "Skill_DemonHunter_RapidFire",
+          "value": 0.15
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "PoisonResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1834650807,
+      "iteration": 8,
+      "next_seed": 1111726875,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Regen",
+          "value": 10000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Multishot",
+          "value": 0.15
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1111726875,
+      "iteration": 9,
+      "next_seed": 1835007188,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "Regen",
+          "value": 10000.0
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1835007188,
+      "iteration": 10,
+      "next_seed": 437731877,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Strafe",
+          "value": 0.15
+        },
+        {
+          "stat": "CriticalChance",
+          "value": 0.06
+        },
+        {
+          "stat": "FireResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 437731877,
+      "iteration": 11,
+      "next_seed": 1878351907,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Life",
+          "value": 0.15
+        },
+        {
+          "stat": "Vit",
+          "value": 1000.0
+        },
+        {
+          "stat": "Gold",
+          "value": 0.35
+        },
+        {
+          "stat": "ColdResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 1878351907,
+      "iteration": 12,
+      "next_seed": 25009214,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Chakram",
+          "value": 0.15
+        },
+        {
+          "stat": "Life",
+          "value": 0.15
+        },
+        {
+          "stat": "LightningResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 25009214,
+      "iteration": 13,
+      "next_seed": 2956912235,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Regen",
+          "value": 10000.0
+        },
+        {
+          "stat": "HitLife",
+          "value": 11975.0
+        },
+        {
+          "stat": "PoisonResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Gold",
+          "value": 0.35
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 2956912235,
+      "iteration": 14,
+      "next_seed": 2603483979,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "Skill_DemonHunter_RapidFire",
+          "value": 0.15
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "CCReduction",
+          "value": 0.4
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "input_seed": 2603483979,
+      "iteration": 15,
+      "next_seed": 1557464998,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 1000.0
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "Life",
+          "value": 0.15
+        },
+        {
+          "stat": "GoldPickUpRadius",
+          "value": 2.0
+        },
+        {
+          "stat": "REQ",
+          "value": 40.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "season": 40,
+  "slot": "Helm",
+  "source": "Generated from Sim::sanctify. User verified all 15 consecutive ordinary-affix results in game on 2026-10-07. Numeric values are modeled maxima; internal seeds are inferred from the matching sequence.",
+  "starting_seed": 2438299784,
+  "upgrade": 1
+}

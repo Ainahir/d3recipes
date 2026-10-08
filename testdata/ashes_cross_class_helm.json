@@ -1,0 +1,16 @@
+{
+  "season": 40,
+  "hardcore": false,
+  "craft_class": "DemonHunter",
+  "upgrade_class": "Barbarian",
+  "slot": "Helm",
+  "upgrade": 1,
+  "item": "Accursed Visage",
+  "source": "User supplied three consecutive in-game ashes outcomes on 2026-10-08.",
+  "notes": "Stat families only; values were not verified. Dexterity and socket are common to every observed roll. No predicted next seeds are used as expected game data.",
+  "outcomes": [
+    {"iteration": 1, "stats": ["Dex", "Sockets", "Life", "HitLife", "FireResist", "GoldPickUpRadius"]},
+    {"iteration": 2, "stats": ["Dex", "Sockets", "Life", "Skill_DemonHunter_ElementalArrow", "ArcaneResist", "REQ"]},
+    {"iteration": 3, "stats": ["Dex", "Sockets", "DR", "Skill_DemonHunter_Chakram", "Experience", "GoldPickUpRadius"]}
+  ]
+}

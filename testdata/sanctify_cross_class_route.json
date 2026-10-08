@@ -1,0 +1,309 @@
+{
+  "season": 40,
+  "hardcore": false,
+  "slot": "Legs",
+  "craft_class": "DemonHunter",
+  "upgrade": 2,
+  "source": "User confirmed that all intermediate outcomes and the final primal reproduced in game on 2026-10-08.",
+  "notes": "Seeds are model-inferred. Sanctify rows contain ordinary stats excluding the secondary replaced by seasonal power; power itself is not modeled. Socket value 0 indicates presence. Percentages are fractions.",
+  "outcomes": [
+    {
+      "class": "DemonHunter",
+      "item": "Cold Cathode Trousers",
+      "op": "Hope of Cain",
+      "seed": 3956852093,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 448.0
+        },
+        {
+          "stat": "Skill_DemonHunter_EntanglingShot",
+          "value": 0.15
+        },
+        {
+          "stat": "Regen",
+          "value": 4910.0
+        },
+        {
+          "stat": "ColdResist",
+          "value": 145.0
+        },
+        {
+          "stat": "GoldPickUpRadius",
+          "value": 2.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 0,
+      "upgrade": 1
+    },
+    {
+      "class": "DemonHunter",
+      "item": "Unholy Plates",
+      "op": "Hope of Cain",
+      "seed": 1375327463,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 574.0
+        },
+        {
+          "stat": "Skill_DemonHunter_EvasiveFire",
+          "value": 0.11
+        },
+        {
+          "stat": "Vit",
+          "value": 570.0
+        },
+        {
+          "stat": "PoisonResist",
+          "value": 202.0
+        },
+        {
+          "stat": "Gold",
+          "value": 0.32
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 0,
+      "upgrade": 2
+    },
+    {
+      "class": "DemonHunter",
+      "item": "Hell Walkers",
+      "op": "C",
+      "quality": "normal",
+      "seed": 3987523677,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 432.0
+        },
+        {
+          "stat": "Vit",
+          "value": 416.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Chakram",
+          "value": 0.15
+        },
+        {
+          "stat": "ResistAll",
+          "value": 93.0
+        },
+        {
+          "stat": "HealthGlobeBonus",
+          "value": 25220.0
+        },
+        {
+          "stat": "GoldPickUpRadius",
+          "value": 2.0
+        }
+      ],
+      "step": 1
+    },
+    {
+      "class": "DemonHunter",
+      "item": "Cage of the Hellborn",
+      "op": "C",
+      "quality": "normal",
+      "seed": 2425913899,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 469.0
+        },
+        {
+          "stat": "Vit",
+          "value": 478.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Companion",
+          "value": 0.11
+        },
+        {
+          "stat": "ArcaneResist",
+          "value": 143.0
+        },
+        {
+          "stat": "DefenseMissile",
+          "value": 0.06
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 2
+    },
+    {
+      "class": "DemonHunter",
+      "item": "Cage of the Hellborn",
+      "op": "S",
+      "quality": "sanctified",
+      "seed": 2494161976,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 650.0
+        },
+        {
+          "stat": "Regen",
+          "value": 7185.0
+        },
+        {
+          "stat": "Vit",
+          "value": 650.0
+        },
+        {
+          "stat": "ColdResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 3
+    },
+    {
+      "class": "Barbarian",
+      "item": "Unholy Plates",
+      "op": "C",
+      "quality": "normal",
+      "seed": 4191663601,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 442.0
+        },
+        {
+          "stat": "Skill_DemonHunter_HungeringArrow",
+          "value": 0.1
+        },
+        {
+          "stat": "DR",
+          "value": 569.0
+        },
+        {
+          "stat": "FireResist",
+          "value": 159.0
+        },
+        {
+          "stat": "Thorns",
+          "value": 2405.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 4
+    },
+    {
+      "class": "Barbarian",
+      "item": "Unholy Plates",
+      "op": "S",
+      "quality": "sanctified",
+      "seed": 1727633472,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 650.0
+        },
+        {
+          "stat": "Vit",
+          "value": 650.0
+        },
+        {
+          "stat": "Skill_DemonHunter_EntanglingShot",
+          "value": 0.15
+        },
+        {
+          "stat": "LightningResist",
+          "value": 210.0
+        },
+        {
+          "stat": "Sockets",
+          "value": 0
+        }
+      ],
+      "step": 5
+    },
+    {
+      "class": "DemonHunter",
+      "item": "Hell Walkers",
+      "op": "C",
+      "quality": "normal",
+      "seed": 3845532634,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 484.0
+        },
+        {
+          "stat": "Vit",
+          "value": 467.0
+        },
+        {
+          "stat": "Run",
+          "value": 0.12
+        },
+        {
+          "stat": "Skill_DemonHunter_Impale",
+          "value": 0.15
+        },
+        {
+          "stat": "FireResist",
+          "value": 160.0
+        },
+        {
+          "stat": "Experience",
+          "value": 165.0
+        }
+      ],
+      "step": 6
+    },
+    {
+      "class": "Barbarian",
+      "item": "Hell Walkers",
+      "op": "R",
+      "quality": "primal",
+      "seed": 1041408967,
+      "stats": [
+        {
+          "stat": "Dex",
+          "value": 650.0
+        },
+        {
+          "stat": "Vit",
+          "value": 650.0
+        },
+        {
+          "stat": "ResistAll",
+          "value": 130.0
+        },
+        {
+          "stat": "Skill_DemonHunter_Multishot",
+          "value": 0.15
+        },
+        {
+          "stat": "Experience",
+          "value": 260.0
+        },
+        {
+          "stat": "Gold",
+          "value": 0.35
+        }
+      ],
+      "step": 7
+    }
+  ]
+}

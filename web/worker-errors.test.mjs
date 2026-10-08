@@ -10,7 +10,7 @@ function harness(engine){
   return {messages,tasks,send:data=>context.onmessage({data})};
 }
 test('affix failures preserve request key and worker continues handling requests',()=>{
-  const h=harness({stems:(_,__,id)=>{if(id===1)throw Error('bad item');return '{}';}});
+  const h=harness({stems:(_,__,id)=>{if(id===1)throw Error('bad item');return '{}';},stat_max:()=>'{}'});
   h.send({type:'stems',key:'failed',item:1});h.send({type:'stems',key:'next',item:2});
   assert.equal(h.messages[0].type,'error');assert.equal(h.messages[0].key,'failed');
   assert.equal(h.messages[1].type,'stems');assert.equal(h.messages[1].key,'next');

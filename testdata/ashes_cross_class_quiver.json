@@ -1,0 +1,18 @@
+{
+  "season": 40,
+  "hardcore": false,
+  "craft_class": "DemonHunter",
+  "upgrade_class": "Barbarian",
+  "slot": "Quiver",
+  "upgrade": 1,
+  "item": "Dead Man's Legacy",
+  "source": "User supplied three consecutive in-game ashes outcomes on 2026-10-08.",
+  "starting_item_observation": {"Dex": 715},
+  "built_in_stats": {"Haste": 203},
+  "notes": "All reported stat families are compared without ordering. Attack is interpreted as attack speed, a built-in quiver stat (attribute 203) rather than a generated affix. Values were not verified for the ashes rolls; no predicted next seeds are used as expected game data.",
+  "outcomes": [
+    {"iteration": 1, "stats": ["Dex", "Vit", "Haste", "CriticalChance", "CooldownReduction", "Gold"]},
+    {"iteration": 2, "stats": ["Dex", "Haste", "CriticalChance", "HatredRegen", "Skill_DemonHunter_ClusterArrow", "MaxDiscipline"]},
+    {"iteration": 3, "stats": ["Dex", "Haste", "CriticalChance", "Sockets", "Skill_DemonHunter_Chakram", "MaxDiscipline"]}
+  ]
+}

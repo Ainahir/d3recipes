@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1fc672fd23";
-import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=1fc672fd23";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=d9da5bc024";
+import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=d9da5bc024";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -15,6 +15,9 @@ let current = null;               // loaded data for the active mode
 
 const modeKey = () => ($("hc").value === "1" ? "hc" : "sc");
 const className = (c) => CLASS_NAMES[c] || c;
+// the class index the generator writes in `by` / `who` / `mystic_by` (the order of data.json's `classes`)
+const CLASS_ORDER = ["DemonHunter", "Barbarian", "Wizard", "WitchDoctor", "Monk", "Crusader", "Necromancer"];
+const heroName = (c) => className(CLASS_ORDER[c]);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function load(key) {
@@ -29,29 +32,39 @@ function load(key) {
 
 const marker = (m) => ({ name: m[0], quality: m[1], lines: m[2] ? [{ stem: m[2], value: m[3] }] : [] });
 
-function hitOf(row, path, lin) {
+// `who`: the hero class doing each letter of `path` (only present when the recipe hands the item to another class); a new group starts
+// whenever the operation or the hero changes, as in a custom search result.
+function hitOf(row, path, lin, who) {
   const route = [];
-  for (const ch of path) {
+  const route_class = [];
+  [...path].forEach((ch, i) => {
     const last = route[route.length - 1];
-    if (last && last[0] === ch) last[1] += 1; else route.push([ch, 1]);
-  }
+    const c = who ? who[i] : undefined;
+    if (last && last[0] === ch && route_class[route_class.length - 1] === c) last[1] += 1; else { route.push([ch, 1]); route_class.push(c); }
+  });
   // checkpoint k = the item after the first k groups of steps (0 = the Hope of Cain item)
   const checkpoints = [marker(lin[0])];
   let at = 0;
   for (const [, n] of route) { at += n; checkpoints.push(marker(lin[Math.min(at, lin.length - 1)])); }
-  return { hope: row.n, slot: row.rs, route, checkpoints, root_name: lin[0][0], name: lin[lin.length - 1][0] };
+  return { hope: row.n, slot: row.rs, route, route_class: who ? route_class : [], craft_class: who ? row.craft : undefined, checkpoints, root_name: lin[0][0], name: lin[lin.length - 1][0] };
 }
 
 // Cost in Hope of Cain units with the relative prices the search minimises (Convert Set Item 0.75, Hope of Cain 1, Reforge 5, Improve Legendary 25),
 // and the plain number of actions (crafts + operations). Cost is what you pay in materials; steps is how long it takes.
 const PRICE = { R: 5, C: 0.75, P: 25 };
-const costOf = (n, path) => Number((n + [...path].reduce((a, c) => a + (PRICE[c] || 0), 0)).toFixed(2));
+// hand-overs between heroes (the build's class -> the crafter, crafter -> first step, step -> step, last step -> Mystic) cost 1 each, the generator's default swap price
+const handOvers = (row, who) => {
+  if (!who) return 0;
+  const seq = [row.by, row.craft, ...who, ...(row.mystic ? [row.mystic_by] : [])];
+  return seq.reduce((a, c, i) => a + (i && c !== seq[i - 1] ? 1 : 0), 0);
+};
+const costOf = (n, path, row, who) => Number((n + [...path].reduce((a, c) => a + (PRICE[c] || 0), 0) + (row ? handOvers(row, who) : 0)).toFixed(2));
 const stepsOf = (n, path) => n + path.length;
 const COST_TIP = "Relative cost: Hope of Cain 1, Reforge 5, Convert Set Item 0.75, Improve Legendary 25. Steps: crafts plus operations.";
 // The numbers are for the site's owner (deciding what to ship), not for players, whose materials row says what a recipe costs:
 // they only show when the address carries ?costs.
 const SHOW_COSTS = new URLSearchParams(location.search).has("costs");
-const costHtml = (n, path) => (SHOW_COSTS ? `<span class="cost" title="${COST_TIP}">cost ${costOf(n, path)} &middot; ${stepsOf(n, path)} steps</span>` : "");
+const costHtml = (n, path, row, who) => (SHOW_COSTS ? `<span class="cost" title="${COST_TIP}">cost ${costOf(n, path, row, who)} &middot; ${stepsOf(n, path)} steps</span>` : "");
 
 const linesOf = (tt) => tt.map(([stem, value, max]) => ({ stem, value, max }));
 
@@ -65,10 +78,12 @@ function fullTooltip(tt, need) {
   return `<details class="full" open><summary>Full tooltip</summary><div class="lines">${rows}</div></details>`;
 }
 
-function recipeBody(row, path, lin, tt, note = "", tooltip = true) {
-  const h = hitOf(row, path, lin);
+function recipeBody(row, path, lin, tt, note = "", tooltip = true, who = row.who) {
+  const h = hitOf(row, path, lin, who);
   const mats = matsHtml(materials(h));
-  return (row.intro ? `<p class="mk">${row.intro}</p>` : "") + stepsHtml(h, [], new Set(row.need)) + note + `<div class="mats">${mats}</div>` + (tooltip ? fullTooltip(tt, row.need) : "");
+  // a recipe that hands the item over names the hero at every step
+  const heroes = who ? { cls: row.by, name: heroName } : undefined;
+  return (row.intro ? `<p class="mk">${row.intro}</p>` : "") + stepsHtml(h, [], new Set(row.need), heroes) + note + `<div class="mats">${mats}</div>` + (tooltip ? fullTooltip(tt, row.need) : "");
 }
 
 const QUALITY = { primal: ["Primal", "t-primal"], crafted: ["Crafted primal", "t-primal"], ancient: ["Ancient", "t-ancient"], normal: ["Legendary", "t-normal"] };
@@ -80,15 +95,18 @@ function rowHtml(row, tooltip = true) {
   }
   const [qt, qc] = QUALITY[row.q] || QUALITY.normal;
   const stats = row.need.map((s) => `<span class="want">${esc(statAbbr(s))}</span>`).join(", ");
-  const mystic = row.mystic ? ` <span class="small">+ Mystic: ${esc(statName(row.mystic))}</span>`
+  // the Mystic hero is named when it is not the one holding the item after the last cube step
+  const holder = row.who ? (row.who.length ? row.who[row.who.length - 1] : row.craft) : undefined;
+  const mysticBy = row.mystic && row.who && row.mystic_by !== holder ? ` as ${esc(heroName(row.mystic_by))}` : "";
+  const mystic = row.mystic ? ` <span class="small">+ Mystic${mysticBy}: ${esc(statName(row.mystic))}</span>`
     : row.nomystic ? ` <span class="small">(no room for ${esc(statName(row.nomystic))} at the Mystic)</span>` : "";
   const craftedNote = row.q === "crafted" ? `<div class="small">Improve Legendary primals: only one can be worn per character.</div>` : "";
   const cheap = (row.cheap || []).map((c) => {
     const [t] = QUALITY[c.q] || QUALITY.normal;
-    return `<details class="full cheap"><summary>Cheaper: ${t.toLowerCase()}${SHOW_COSTS ? `, cost ${costOf(row.n, c.path)} (${stepsOf(row.n, c.path)} steps)` : ""}</summary>${recipeBody(row, c.path, c.lin, c.tt, "", tooltip)}</details>`;
+    return `<details class="full cheap"><summary>Cheaper: ${t.toLowerCase()}${SHOW_COSTS ? `, cost ${costOf(row.n, c.path, row, c.who)} (${stepsOf(row.n, c.path)} steps)` : ""}</summary>${recipeBody(row, c.path, c.lin, c.tt, "", tooltip, c.who)}</details>`;
   }).join("");
   return `<details class="rec"><summary${row.item ? "" : ' class="noname"'}>${name}
-    <span class="meta"><span class="tag ${qc}">${qt}</span><span class="aff">${stats}</span>${mystic}${costHtml(row.n, row.path)}</span></summary>
+    <span class="meta"><span class="tag ${qc}">${qt}</span><span class="aff">${stats}</span>${mystic}${costHtml(row.n, row.path, row, row.who)}</span></summary>
     <div class="body">${recipeBody(row, row.path, row.lin, row.tt, craftedNote, tooltip)}${cheap}</div></details>`;
 }
 
@@ -130,7 +148,7 @@ function salvageHtml(data) {
     const r = a.row;
     const slot = SLOT_NAMES[a.slot] || a.slot;
     return `<details class="rec"><summary><span class="nm">${esc(slot)}</span>
-      <span class="meta"><span class="aff">Make a ${esc(className(a.class))}</span>${costHtml(r.n, r.path)}</span></summary>
+      <span class="meta"><span class="aff">Make a ${esc(className(a.class))}</span>${costHtml(r.n, r.path, r, r.who)}</span></summary>
       <div class="body">${recipeBody(r, r.path, r.lin, r.tt, `<div class="small">You get: ${esc(r.item)}</div>`, false)}</div></details>`;
   }).join("");
   return head + `<section class="card slot">${rows || '<div class="small">Nothing found.</div>'}</section>`;

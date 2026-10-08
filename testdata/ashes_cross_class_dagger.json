@@ -1,0 +1,18 @@
+{
+  "season": 40,
+  "hardcore": false,
+  "craft_class": "DemonHunter",
+  "upgrade_class": "Barbarian",
+  "slot": "Dagger",
+  "upgrade": 1,
+  "item": "Karlei's Point",
+  "source": "User supplied three consecutive in-game ashes outcomes on 2026-10-08.",
+  "starting_item_observation": {"Damage": 0.06, "Dex": 702, "Experience": 178, "SplashDamage": 0.23},
+  "notes": "Stat families only for ashes; values were not verified. The common weapon damage affix was not reported and is excluded from comparisons. No predicted next seeds are used as expected game data.",
+  "omitted_stats": ["ColdD"],
+  "outcomes": [
+    {"iteration": 1, "stats": ["Dex", "CooldownReduction", "SplashDamage", "WeaponHitBlind1h"]},
+    {"iteration": 2, "stats": ["Dex", "Haste", "HitLife", "WeaponHitFear1h"]},
+    {"iteration": 3, "stats": ["Dex", "ResourceCostReduction", "SplashDamage", "Indestructible"]}
+  ]
+}

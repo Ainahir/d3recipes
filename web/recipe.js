@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=1fc672fd23";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=d9da5bc024";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -36,7 +36,7 @@ export function matsHtml(m) {
   const out = [];
   const grouped = new Set();
   // Always the same order: Death's Breath, the three crafting grades, the five legendary materials, Forgotten Souls, Primordial Ashes.
-  const ORDER = ["Death's Breath", ...MATERIAL_GROUPS[0].names, ...MATERIAL_GROUPS[1].names, "Forgotten Soul", "Primordial Ashes"];
+  const ORDER = ["Death's Breath", ...MATERIAL_GROUPS[0].names, ...MATERIAL_GROUPS[1].names, "Forgotten Soul", "Primordial Ashes", "Angelic Crucible"];
   const rank = (n) => (ORDER.includes(n) ? ORDER.indexOf(n) : ORDER.length);
   for (const [name, qty] of Object.entries(m).sort((a, b) => rank(a[0]) - rank(b[0]))) {
     if (grouped.has(name)) continue;
@@ -50,7 +50,7 @@ export function matsHtml(m) {
   return out.join("");
 }
 
-const OP_TEXT = { R: (n) => `Reforge &times;${n}`, P: (n) => `Improve with ashes &times;${n}`, C: (n) => `Convert &times;${n}` };
+const OP_TEXT = { S: (n) => `Sanctify &times;${n}`, R: (n) => `Reforge &times;${n}`, P: (n) => `Improve with ashes &times;${n}`, C: (n) => `Convert &times;${n}` };
 
 const MAIN = new Set(["Str", "Dex", "Int", "StrDex", "StrInt", "StrVit", "DexInt", "DexVit", "IntVit"]);
 
@@ -85,13 +85,14 @@ export function stepsHtml(h, missing, wantStems, heroes) {
   const out = [];
   const cps = h.checkpoints || [];
   const who = h.route_class || [];
-  const switched = heroes && who.some((c) => c !== heroes.cls);
+  const crafter = h.craft_class ?? (heroes && heroes.cls);
+  const switched = heroes && (crafter !== heroes.cls || who.some((c) => c !== heroes.cls));
   const as = (c) => (switched ? ` <b>as ${heroes.name(c)}</b>` : "");
   // Long steps say what to stop on (any count above 7): a player may pass the same item several times on the way,
   // and the roll of its main stat tells the right one apart.
   const hopeNote = (h.hope > 7 || h.route.some(([op]) => op === "C") || h.root_name !== h.name) && cps[0]
     ? ` <span class="note">(stop on ${stopOn(cps[0], null)})</span>` : "";
-  out.push(`Craft &amp; upgrade ${h.hope} ${slotPlural(h.slot, h.hope)}${switched ? as(heroes.cls) : ""}${hopeNote}`);
+  out.push(`Craft &amp; upgrade ${h.hope} ${slotPlural(h.slot, h.hope)}${switched ? as(crafter) : ""}${hopeNote}`);
   h.route.forEach(([op, n], k) => {
     const last = k === h.route.length - 1;
     const cp = cps[k + 1];
@@ -102,7 +103,7 @@ export function stepsHtml(h, missing, wantStems, heroes) {
     // a search result names the lines the Mystic may swap and, when another class must enchant, the hero
     const legal = (h.mystic || []).filter((s) => !wantStems.has(s) && !RANGE_STEMS.has(s));
     // compared with the hero holding the item after the last cube step (the creator when nothing was handed over)
-    const holder = who.length ? who[who.length - 1] : heroes && heroes.cls;
+    const holder = who.length ? who[who.length - 1] : crafter;
     const by = heroes && h.mystic_class !== undefined && (h.mystic_class !== holder || switched) ? ` <b>as ${heroes.name(h.mystic_class)}</b>` : "";
     out.push(legal.length && missing.length === 1
       ? `Mystic${by}: ${legal.map((s) => statName(s)).join(" or ")} &rarr; ${statName(missing[0])}`
@@ -165,16 +166,23 @@ export function tooltipRows(lines) {
 // mode always gives the same recipes, so a link (or a saved entry) only has to carry the request.
 export const DEFAULT_PRICES = ["0.75", "1", "5", "25"];
 export const DEFAULT_SWITCH = "1";   // swap cost
-export const DEFAULT_SWAPS = "0";    // hand-overs during the cube steps ("" = no limit)
-export const DEFAULT_CONVERTS = "2"; // Convert Set Item steps per recipe ("" = no limit)
+export const DEFAULT_SWAPS = "4";    // hand-overs during the cube steps ("" = no limit)
+export const DEFAULT_CONVERTS = "4"; // Convert Set Item steps per recipe ("" = no limit)
+// Light's Calling (Angelic Crucibles): Season 27, then every sixth season from 34 in the theme rotation (S46 on is projected, not announced)
+export const supportsSanctify = (season) => season === 27 || (season >= 34 && (season - 34) % 6 === 0);
+export const defaultSanctifyCap = (season) => supportsSanctify(season) ? "2" : "0";
+export const DEFAULT_SANCTIFY_PRICE = "5"; // the Reforge price
 
 export function requestHash(req, season, hc) {
   const e = encodeURIComponent;
   const w = req.w.map(([s, m]) => e(s) + (m === "" || m == null ? "" : "~" + e(m))).join(",");
   // the swap settings appear in the link only when they differ from the defaults, so older links and saved searches stay the same
+  // Sanctification: the price only when it is not the default, the cap only when it is not the season's default (`sn` absent = that default)
+  const sanctify = (req.sa != null ? `&sa=${e(req.sa)}` : "") + (req.sn != null ? `&sn=${e(req.sn)}` : "");
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
-  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}`;
+  const po = req.po ? "&po=1" : "";
+  return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}${sanctify}${po}`;
 }
 
 // -> {req, season, hc} or null when the fragment is not a request link
@@ -188,21 +196,26 @@ export function parseRequestHash(hash) {
   if (c === null || i === null) return null;
   const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); return [d(s), d(v)]; });
   const p = (q.get("p") || "").split(",").map(d);
+  const season = Math.max(1, Math.round(num("s") || 40));
   return {
     req: {
+      po: q.get("po") === "1",
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
+      sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : undefined,
+      sn: q.has("sn") && (q.get("sn") === "" || /^\d+$/.test(q.get("sn"))) ? q.get("sn") : undefined,
       cn: q.has("cn") ? (q.get("cn") === "" ? "" : /^\d+$/.test(q.get("cn")) ? q.get("cn") : DEFAULT_CONVERTS) : DEFAULT_CONVERTS,
       xn: q.has("xn") ? (q.get("xn") === "" ? "" : /^\d+$/.test(q.get("xn")) ? q.get("xn") : DEFAULT_SWAPS) : DEFAULT_SWAPS,
       // a finite cost the engine can take in hundredths (a crafted `xs=Infinity` would reach it as null)
       xs: Number.isFinite(num("xs")) && num("xs") >= 0 && num("xs") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("xs") : DEFAULT_SWITCH,
     },
-    season: Math.max(1, Math.round(num("s") || 40)), hc: q.get("m") === "hc",
+    season, hc: q.get("m") === "hc",
   };
 }
 
 export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}` +
   ((req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `/${req.xn ?? DEFAULT_SWAPS}~${req.xs ?? DEFAULT_SWITCH}` : "") +
-  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "");
+  ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "") +
+  (req.sa != null ? `/sa${req.sa}` : "") + (req.sn != null ? `/sn${req.sn}` : "") + (req.po ? "/po" : "");
 
 const SAVED_KEY = "d3r-saved";
 export function savedList() {
