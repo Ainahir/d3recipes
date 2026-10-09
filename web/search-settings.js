@@ -1,5 +1,6 @@
-import {isPct} from "./stats.js?v=f5984399b2";
-import {DEFAULT_CONVERTS,mysticCanFinish,defaultSanctifyCap,DEFAULT_SANCTIFY_PRICE} from "./recipe.js?v=f5984399b2";
+import {isPct} from "./stats.js?v=2b9855cfdd";
+import { nodeCap } from "./ui.js?v=2b9855cfdd";
+import {DEFAULT_CONVERTS,mysticCanFinish,defaultSanctifyCap,DEFAULT_SANCTIFY_PRICE} from "./recipe.js?v=2b9855cfdd";
 export function baseQuery(req, item, season, hc) {
   // The planner works in whole numbers; hundredths keep ratios like 0.75 exact.
   const cost = (v) => Math.max(1, Math.round((+v || 0) * 100));
@@ -14,6 +15,7 @@ export function baseQuery(req, item, season, hc) {
     // any class's Hope of Cain may create the item (each class has its own sequence; a class item lands from its own pool, verified in game,
     // LEDGER V104, V109-V110). Another class creating it counts as a hand-over, so "Most hero swaps" 0 turns this off.
     craft_any: true,
+    node_cap: nodeCap(),
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
     max_sanctify: (req.sn ?? defaultSanctifyCap(season)) === "" ? 255 : Math.min(254, Math.max(0, Math.round(+(req.sn ?? defaultSanctifyCap(season)) || 0))),
     cost_s: cost(req.sa ?? DEFAULT_SANCTIFY_PRICE),

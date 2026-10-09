@@ -1,7 +1,7 @@
-import {baseQuery,pickHits} from './search-settings.js?v=f5984399b2';
-import {readSettings,clonePanel,hitHtml,esc} from './ui.js?v=f5984399b2';
-import {statName,CLASS_NAMES} from './stats.js?v=f5984399b2';
-import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=f5984399b2';
+import {baseQuery,pickHits} from './search-settings.js?v=2b9855cfdd';
+import {readSettings,clonePanel,hitHtml,esc,searchStarted,searchEnded} from './ui.js?v=2b9855cfdd';
+import {statName,CLASS_NAMES} from './stats.js?v=2b9855cfdd';
+import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=2b9855cfdd';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const V=new URL(import.meta.url).searchParams.get('v');
@@ -54,7 +54,7 @@ window.addEventListener('storage', event => {
 });
 refresh();
 
-function cancel(){worker.postMessage({type:'cancel'});job++;active=null;$('cancel').hidden=true;$('run').disabled=!info||!build;}
+function cancel(){searchEnded();worker.postMessage({type:'cancel'});job++;active=null;$('cancel').hidden=true;$('run').disabled=!info||!build;}
 const heroName=c=>CLASS_NAMES[info.classes[c]]||info.classes[c];
 // One card per slot, like the prepared lists: the item and the stats wanted, then the recipe cards custom search shows.
 function rowHtml(row){
@@ -91,7 +91,7 @@ $('run').addEventListener('click',()=>{
  cancel();for(const row of rows)row.best=null;
  const number=id=>Math.max(0,Math.round(+$(id).value||0)),season=Math.max(1,+document.getElementById('season').value||40);
  active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season,'search-builds-'),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
- $('run').disabled=true;$('cancel').hidden=false;nextRow();
+ $('run').disabled=true;$('cancel').hidden=false;searchStarted();nextRow();
 });
 function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}
 function priorityQuery(row){
@@ -109,12 +109,14 @@ function searchItems(row,items){
 function nextRow(){
  let row=active.queue.shift();while(row?.owned)row=active.queue.shift();
  if(!row){cancel();status.textContent='Build search complete. Costs use the selected weights.';return;}
- active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;
+ active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;row.limitedBy=null;
  const items=searchItems(row,info.items),item=items[0];
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
  row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);Object.assign(active.query,priorityQuery(row));active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
 }
 function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(tiers.length-active.tier))});}
+// which limit ended the row's search, so the user knows what to change
+function limitNote(row){return row.limitedBy==='size'?'The search reached its size limit, so a cheaper recipe may exist.':'The search stopped at the time limit; a longer limit may find a better recipe.';}
 function showMatches(row){
  const snap=targetStats(row).map(w=>w.stem);let chosen=[];
  for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
@@ -122,12 +124,12 @@ function showMatches(row){
  const cell=document.getElementById('build-match-'+row.index);
  if(chosen.length){
    const named=row.alternatives?.length;
-   cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">Best found within limits</div>':'');
- }else cell.textContent='No matching recipe found'+(row.limited?' within limits. A longer time limit may find one.':'');
+   cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">'+limitNote(row)+'</div>':'');
+ }else cell.textContent='No matching recipe found.'+(row.limited?' '+limitNote(row):'');
 }
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
- else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;row.limited ||=m.results.status.capped||m.type==='done'&&!m.results.status.done;showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<tiers.length)startTier();else nextRow();}}
+ else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;if(m.results.status.capped){row.limited=true;row.limitedBy='size';}else if(m.type==='done'&&!m.results.status.done&&!row.limited){row.limited=true;row.limitedBy='time';}showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<tiers.length)startTier();else nextRow();}}
  else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});

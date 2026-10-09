@@ -140,3 +140,28 @@ export function clonePanel(prefix) {
   for (const el of panel.querySelectorAll("input")) el.value = el.defaultValue;
   return panel;
 }
+
+// ---------- how big a search the device may hold ----------
+// Each search node takes about 145 bytes (3 million = 0.4 GB, 5 million = 0.7 GB, 10 million = 1.5 GB), and the clock does not bound memory.
+// 3 million is the floor everyone gets. A device that reports 4 GB or more of memory (deviceMemory: Chrome and Edge only, rounded, capped
+// at 8) gets more, unless it is a phone or tablet. A page killed during a search drops that device back to the floor for a week.
+const CAP_FLOOR = 3_000_000;
+export function capFor({ memoryGB, small, killed }) {
+  if (killed || small || !memoryGB) return CAP_FLOOR;
+  return memoryGB >= 8 ? 10_000_000 : memoryGB >= 4 ? 5_000_000 : CAP_FLOOR;
+}
+const RUN_KEY = "d3r-search-running", LOW_KEY = "d3r-cap-low", WEEK = 7 * 24 * 3600 * 1000;
+const lowRecently = () => { try { return Date.now() - +localStorage.getItem(LOW_KEY) < WEEK; } catch (e) { return false; } };
+export function nodeCap() {
+  const nav = typeof navigator === "undefined" ? {} : navigator;
+  const small = !!(nav.userAgentData && nav.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent || "");
+  return capFor({ memoryGB: nav.deviceMemory, small, killed: lowRecently() });
+}
+// A search in flight leaves a marker in this tab's session storage. A normal close or navigation clears it (pagehide); a tab the system
+// killed does not get to, so the next load finds the marker and remembers that this device could not hold the search.
+export function searchStarted() { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* ignore */ } }
+export function searchEnded() { try { sessionStorage.removeItem(RUN_KEY); } catch (e) { /* ignore */ } }
+try {
+  if (sessionStorage.getItem(RUN_KEY)) { localStorage.setItem(LOW_KEY, String(Date.now())); sessionStorage.removeItem(RUN_KEY); }
+  addEventListener("pagehide", searchEnded);
+} catch (e) { /* no storage or no window: nothing to remember */ }

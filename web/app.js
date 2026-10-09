@@ -1,10 +1,10 @@
-import {baseQuery,pickHits} from "./search-settings.js?v=f5984399b2";
+import {baseQuery,pickHits} from "./search-settings.js?v=2b9855cfdd";
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=f5984399b2";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=f5984399b2";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=2b9855cfdd";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=2b9855cfdd";
 
-import { combo, hitHtml, readSettings } from "./ui.js?v=f5984399b2";
+import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=2b9855cfdd";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -250,6 +250,7 @@ function nextTier() {
 // One search for one request. The worker runs one search at a time, so a new run replaces (and cancels) the one in flight.
 function startRun(req, item, season, hc, secs, onUpdate, onDone, onCancel) {
   if (run && !run.finished) { run.finished = true; worker.postMessage({ type: "cancel" }); if (run.onCancel) run.onCancel(); }
+  searchStarted();
   run = {
     base: baseQuery(req, item, season, hc), deadline: performance.now() + Math.max(1, secs) * 1000,
     // Primal only keeps natural primals alone: no crafted primal, ancient or plain legendary, so the whole time limit goes to them
@@ -272,6 +273,7 @@ function onResults(r, final) {
 
 function finish() {
   run.finished = true;
+  searchEnded();
   run.onDone(run);
 }
 
