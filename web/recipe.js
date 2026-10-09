@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=1571023d0b";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=35e09eb329";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 

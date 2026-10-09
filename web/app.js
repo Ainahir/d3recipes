@@ -1,9 +1,9 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1571023d0b";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=1571023d0b";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=35e09eb329";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=35e09eb329";
 
-import { combo, hitHtml } from "./ui.js?v=1571023d0b";
+import { combo, hitHtml } from "./ui.js?v=35e09eb329";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -249,8 +249,9 @@ function baseQuery(req, item, season, hc) {
     // every class may take the item (`max_switch` hand-overs during the cube steps, any class at the Mystic)
     switch: [0, 1, 2, 3, 4, 5, 6].filter((c) => c !== req.c), max_switch: req.xn === "" ? 255 : Math.min(254, +req.xn || 0),
     cost_switch: Math.max(0, Math.round((+req.xs || 0) * 100)),
-    // an item of no class may also be crafted by another class's Hope of Cain, which counts as a hand-over
-    craft_any: item.classes.length > 1,
+    // any class's Hope of Cain may create the item (each class has its own sequence; a class item lands from its own pool, verified in game,
+    // LEDGER V104, V109-V110). Another class creating it counts as a hand-over, so "Most hero swaps" 0 turns this off.
+    craft_any: true,
     eligible: true, n0: 0, maxpos: 4096, maxsteps: 1000, max_primalize: 255, max_convert: (req.cn ?? DEFAULT_CONVERTS) === "" ? 255 : Math.min(254, +(req.cn ?? DEFAULT_CONVERTS) || 0), set_roots: true,
     max_sanctify: (req.sn ?? defaultSanctifyCap(season)) === "" ? 255 : Math.min(254, Math.max(0, Math.round(+(req.sn ?? defaultSanctifyCap(season)) || 0))),
     cost_s: cost(req.sa ?? DEFAULT_SANCTIFY_PRICE),
