@@ -1,8 +1,8 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Shared page pieces: the type-ahead picker and the recipe result card, used by custom search and the build pages.
-import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=f5984399b2";
-import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=f5984399b2";
+import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=2b9855cfdd";
+import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=2b9855cfdd";
 
 // ---------- keyboard-navigable autocomplete ----------
 // source() -> [{html, value}] for the current text; Up/Down move, Enter (or click) picks, Escape closes.
@@ -10,6 +10,8 @@ import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap,
 export const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 
 export function combo(input, box, source, emptyText, onPick) {
+  const controller = new AbortController();
+  const on = (target, type, listener) => target.addEventListener(type, listener, { signal: controller.signal });
   let items = [], active = -1;
   const paint = () => {
     box.innerHTML = items.length
@@ -32,9 +34,9 @@ export function combo(input, box, source, emptyText, onPick) {
   const open = () => { items = source(); active = items.length ? 0 : -1; paint(); box.hidden = false; input.setAttribute("aria-expanded", "true"); };
   const close = () => { box.hidden = true; input.setAttribute("aria-expanded", "false"); };
   const pick = (i) => { const x = items[i]; if (!x) return; input.value = ""; close(); onPick(x.value); };
-  input.addEventListener("input", open);
-  input.addEventListener("focus", open);
-  input.addEventListener("keydown", (e) => {
+  on(input, "input", open);
+  on(input, "focus", open);
+  on(input, "keydown", (e) => {
     const down = e.key === "ArrowDown" || e.key === "Down", up = e.key === "ArrowUp" || e.key === "Up";
     if (down || up) {
       e.preventDefault();
@@ -51,19 +53,19 @@ export function combo(input, box, source, emptyText, onPick) {
   // Only a pointer that really moved counts: browsers also fire a phantom mousemove when the list scrolls or redraws under
   // a resting pointer, which must not steal the highlight back from the arrow keys.
   let px = -1, py = -1;
-  box.addEventListener("mousemove", (e) => {
+  on(box, "mousemove", (e) => {
     if (e.clientX === px && e.clientY === py) return;
     px = e.clientX; py = e.clientY;
     const el = e.target.closest("[data-i]");
     if (el && +el.dataset.i !== active) setActive(+el.dataset.i, false);
   });
-  box.addEventListener("mousedown", (e) => {
+  on(box, "mousedown", (e) => {
     const el = e.target.closest("[data-i]");
     if (el) { e.preventDefault(); pick(+el.dataset.i); }
   });
-  const onDocClick = (e) => { if (e.target !== input && !box.contains(e.target)) close(); };
-  document.addEventListener("click", onDocClick);
-  return { close, dispose: () => document.removeEventListener("click", onDocClick) };
+  on(document, "click", (e) => { if (e.target !== input && !box.contains(e.target)) close(); });
+  // dispose removes every listener, for pages that redraw their pickers
+  return { close, dispose: () => { controller.abort(); close(); items = []; } };
 }
 
 const TAGS = {

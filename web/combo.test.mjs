@@ -1,8 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-const source=await readFile(new URL('./affix-picker.js',import.meta.url),'utf8');
-const {combo}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+import {combo} from './ui.js';
 test('disposal removes document and input listeners, including after repeated replacements',()=>{
   const document=new EventTarget();globalThis.document=document;
   const input=new EventTarget();input.setAttribute=()=>{};

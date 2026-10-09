@@ -1,10 +1,9 @@
-import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=f5984399b2';
-import { combo as itemCombo, esc } from './ui.js?v=f5984399b2';
-import { parseBuildToml } from './build-toml.js?v=f5984399b2';
-import { combo } from './affix-picker.js?v=f5984399b2';
+import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=2b9855cfdd';
+import { combo, esc } from './ui.js?v=2b9855cfdd';
+import { parseBuildToml } from './build-toml.js?v=2b9855cfdd';
 // randomUUID exists only on HTTPS and localhost pages; a self-hosted plain-HTTP page needs the fallback
 const uid=()=>globalThis.crypto?.randomUUID?.()??'b-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
-import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=f5984399b2';
+import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=2b9855cfdd';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
 const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders:['Shoulders'],Chest:['Chest','Cloak'],Hands:['Gloves'],Wrists:['Bracers'],Waist:['Belt','MightyBelt'],Legs:['Legs'],Feet:['Boots'],Amulet:['Amulet'],'Ring 1':['Ring'],'Ring 2':['Ring']};
@@ -37,7 +36,7 @@ function render(){for(const i of pickers.keys())disposePicker(i);for(const c of 
 }));
   slots.forEach((slot,i)=>{
     const source=()=>{const q=$('item-'+i).value.trim().toLowerCase();return candidates(slot).filter(it=>!q||it.name.toLowerCase().includes(q)).slice(0,60).map(it=>({value:it,html:esc(it.name)+' <span class="hint">'+esc(SLOT_NAMES[it.slot]||it.slot)+'</span>'}));};
-    itemCombos.push(itemCombo($('item-'+i),$('pick-'+i),source,'No matching item',it=>{draft.slots=draft.slots.filter(r=>r.slot!==slot);draft.slots.push({slot,item:it.id,wants:[]});itemChip(i);loadAffixes(i);}));
+    itemCombos.push(combo($('item-'+i),$('pick-'+i),source,'No matching item',it=>{draft.slots=draft.slots.filter(r=>r.slot!==slot);draft.slots.push({slot,item:it.id,wants:[]});itemChip(i);loadAffixes(i);}));
     itemChip(i);
   });
   slots.forEach((_,i)=>loadAffixes(i));}
@@ -55,7 +54,7 @@ const chips=()=>{const list=box.querySelector('.chips');list.replaceChildren(...
   const up=document.createElement('button');up.type='button';up.dataset.up=String(i);up.title='Move up in priority';up.setAttribute('aria-label','Move '+statName(want.stem)+' up');up.disabled=i===0;up.textContent='↑';
   const remove=document.createElement('button');remove.type='button';remove.dataset.remove=String(i);remove.title='Remove';remove.setAttribute('aria-label','Remove '+statName(want.stem));remove.textContent='×';
   chip.append(label,up,remove);return chip;
-}));list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.up;[row.wants[i-1],row.wants[i]]=[row.wants[i],row.wants[i-1]];chips();}));list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{row.wants.splice(+b.dataset.remove,1);chips();}));};chips();const input=box.querySelector('input');pickers.set(request.i,combo(input,box.querySelector('.pick'),()=>{const text=input.value.trim().toLowerCase();return stems.filter(stem=>!row.wants.some(w=>w.stem===stem)&&(statName(stem).toLowerCase().includes(text)||stem.toLowerCase().includes(text))).slice(0,40).map(stem=>({value:stem,label:statName(stem)}));},'No matching stats.',stem=>{row.wants.push({stem,min:null});chips();}));}
+}));list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.up;[row.wants[i-1],row.wants[i]]=[row.wants[i],row.wants[i-1]];chips();}));list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{row.wants.splice(+b.dataset.remove,1);chips();}));};chips();const input=box.querySelector('input');pickers.set(request.i,combo(input,box.querySelector('.pick'),()=>{const text=input.value.trim().toLowerCase();return stems.filter(stem=>!row.wants.some(w=>w.stem===stem)&&(statName(stem).toLowerCase().includes(text)||stem.toLowerCase().includes(text))).slice(0,40).map(stem=>({value:stem,html:esc(statName(stem))}));},'No matching stats.',stem=>{row.wants.push({stem,min:null});chips();}));}
 worker.onmessage=({data:m})=>{if(m.type==='ready'){info=m.info;$('class').replaceChildren(...info.classes.map((c,i)=>new Option(CLASS_NAMES[c]||c,String(i))));$('editor').hidden=false;$('loading').hidden=true;render();listSaved();}else if(m.type==='stems'){const r=pending.get(m.key);pending.delete(m.key);if(r?.resolve){r.resolve(m.stems);return;}if(r&&r.generation===generation)affixPicker(r,Object.keys(m.stems).filter(s=>!HIDDEN.test(s)).sort((a,b)=>statName(a).localeCompare(statName(b))));}else if(m.type==='error')failRequests(m.message,m.key);};
 $('name').addEventListener('input',()=>draft.name=$('name').value);
 $('class').addEventListener('change',()=>{draft.class=+$('class').value;draft.slots=draft.slots.filter(r=>!r.item||candidates(r.slot).some(it=>it.id===r.item));render();notice('Class changed. Items unavailable to this class were removed.');});
