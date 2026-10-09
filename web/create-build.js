@@ -46,7 +46,7 @@ const label=document.createElement('label');label.htmlFor=inputId;label.textCont
 const chipList=document.createElement('div');chipList.className='chips';
 const statInput=document.createElement('input');statInput.id=inputId;statInput.type='text';statInput.placeholder='Search stats: crit, cooldown, dexterity...';statInput.autocomplete='off';statInput.setAttribute('role','combobox');statInput.setAttribute('aria-expanded','false');statInput.setAttribute('aria-controls',pickId);
 const suggestions=document.createElement('div');suggestions.id=pickId;suggestions.className='pick';suggestions.setAttribute('role','listbox');suggestions.hidden=true;
-const help=document.createElement('p');help.className='small';help.textContent='Leave empty for any roll. Chips are ordered from highest to lowest priority.';
+const help=document.createElement('p');help.className='small';help.textContent='Leave empty for any roll. The search goes for all of them (the Mystic may add one); the order is kept when you export.';
 disposePicker(request.i);box.replaceChildren(label,chipList,statInput,suggestions,help);
 const chips=()=>{const list=box.querySelector('.chips');list.replaceChildren(...row.wants.map((want,i)=>{
   const chip=document.createElement('div');chip.className='chip';

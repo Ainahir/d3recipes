@@ -20,21 +20,15 @@ test('all bundled builds import against real item and affix tables',async()=>{
   for(const source of builds){const {build}=await context.prepareImported(source);assert.ok(build.slots.length,source.name);assert.ok(build.slots.every(row=>row.wants.every(w=>w.exportName)),source.name);}
   assert.equal(pending.size,0);
 });
-test('real WASM accepts alternatives and imported priority/Mystic queries',async()=>{
+test('real WASM accepts alternatives',async()=>{
   const builds=parseBuildToml(await readFile(new URL('../builds.toml',import.meta.url),'utf8'));
   const source=builds.find(b=>b.name.toLowerCase().includes('ue'));
   const {build}=await context.prepareImported(source);
   for(const row of build.slots.filter(row=>row.alternatives.length)){
     const items=context.searchItems(row,context.info.items);
     const query=baseQuery({c:build.class,p:['0.75','1','5','25'],f:75,xn:'0',xs:'1',cn:'2',w:row.wants.map(w=>[w.stem,''])},items[0],40,false);
-    Object.assign(query,context.priorityQuery(row),{items:Array.from(items,item=>item.id),slots:Array.from(new Set(items.map(item=>item.slot))),quality:'normal',maxpos:30,node_cap:10000});
+    Object.assign(query,{items:Array.from(items,item=>item.id),slots:Array.from(new Set(items.map(item=>item.slot))),quality:'normal',maxpos:30,node_cap:10000});
     const handle=engine.search(JSON.stringify(query));
     try{handle.run(10000);const results=JSON.parse(handle.results());assert.ok(results.status);for(const hit of [...results.full,...results.near])assert.ok(items.some(item=>item.name===hit.name),hit.name);}finally{handle.free();}
   }
-});
-
-test('imported priorities never stop the search at the first route one stat short',()=>{
-  const row={wants:[{stem:'ArcanePowerOnCrit',imported:true},{stem:'CriticalChance',imported:true},{stem:'CooldownReduction',imported:true}]};
-  const q=context.priorityQuery(row);
-  assert.equal(q.end_on_near,false);assert.equal(q.min_match,2);assert.deepEqual(Array.from(q.mystic),['CooldownReduction']);
 });

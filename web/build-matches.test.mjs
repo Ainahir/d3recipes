@@ -13,18 +13,9 @@ test('build results accept only primals and rank eligible matches by stats then 
   assert.equal(context.bestCandidate([candidate('normal',2,1),candidate('ancient',2,1),candidate('crafted',2,1)]),undefined);
   assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('primal',2,20)]).hit.cost,20);
 });
-test('imported priorities search first two stats and allow third at Mystic',()=>{
-  const row={wants:['A','B','C','D'].map(stem=>({stem,min:null,imported:true}))};
-  const query=context.priorityQuery(row);
-  assert.deepEqual(Array.from(query.wants,w=>w.fam[0]),['A','B']);assert.equal(query.min_match,2);
-  assert.deepEqual(Array.from(query.mystic),['C']);assert.deepEqual(Array.from(query.keep),['A','B']);assert.equal(query.mystic_finish,true);
-  assert.equal(context.targetStats(row).length,3);
-});
-test('two imported priorities allow Mystic to finish the second',()=>{
-  const query=context.priorityQuery({wants:['A','B'].map(stem=>({stem,min:null,imported:true}))});
-  assert.equal(query.min_match,1);assert.deepEqual(Array.from(query.keep),['A']);
-});
-test('manually selected required affixes retain all requirements',()=>{
-  const row={wants:['A','B','C','D'].map(stem=>({stem,min:null}))};
-  assert.equal(Object.keys(context.priorityQuery(row)).length,0);assert.equal(context.targetStats(row).length,4);
+test('every stat a build lists is a target, imported or made by hand',()=>{
+  for(const imported of [true,false]){
+    const row={wants:['A','B','C','D','E'].map(stem=>({stem,min:null,imported}))};
+    assert.deepEqual(Array.from(context.targetStats(row),w=>w.stem),['A','B','C','D','E']);
+  }
 });

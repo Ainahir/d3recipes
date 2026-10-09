@@ -58,12 +58,11 @@ function cancel(){searchEnded();worker.postMessage({type:'cancel'});job++;active
 const heroName=c=>CLASS_NAMES[info.classes[c]]||info.classes[c];
 // One card per slot, like the prepared lists: the item and the stats wanted, then the recipe cards custom search shows.
 function rowHtml(row){
- const imported=row.wants.some(w=>w.imported);
  const items=row.any_item?'Any item':[row.externalName||info?.items.find(it=>it.id===row.item)?.name||'Unknown item',...(row.alternatives||[])].join(' or ');
- const stats=targetStats(row).map((w,i)=>esc(w.label||statName(w.stem))+(imported&&i===2?' (Mystic)':'')).join(', ');
+ const stats=targetStats(row).map((w,i)=>esc(w.label||statName(w.stem))).join(', ');
  const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
  return `<section class="card slot"><h3>${esc(row.slot)}</h3>
-  <div class="bhead"><span class="nm">${esc(items)}</span><span class="small"${imported?' title="Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export."':''}>${stats}</span></div>
+  <div class="bhead"><span class="nm">${esc(items)}</span><span class="small">${stats}</span></div>
   <label class="small"><input type="checkbox" data-row="${row.index}" style="width:auto" aria-label="${esc('Already have '+name)}"> Already have it</label>
   <div id="build-match-${row.index}" class="small">Not searched</div>
 </section>`;
@@ -93,13 +92,8 @@ $('run').addEventListener('click',()=>{
  active={queue:rows.filter(r=>!r.owned),settings:{...readSettings(season,'search-builds-'),c:build.class},secs:Math.max(1,number('secs')),season,hc:document.getElementById('hc').value==='1'};
  $('run').disabled=true;$('cancel').hidden=false;searchStarted();nextRow();
 });
-function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}
-function priorityQuery(row){
- if(!row.wants.some(w=>w.imported))return {};
- // the Mystic is kept for the last priority, so a route one stat short of the first two is not a stopping point (custom search's early stop assumes the Mystic can finish it)
- const targets=targetStats(row),required=targets.slice(0,2),mystic=targets[2];
- return {wants:required.map(w=>({fam:[w.stem],min:w.min})),min_match:mystic?required.length:Math.min(1,required.length),mystic_finish:true,end_on_near:false,mystic:mystic?[mystic.stem]:[],keep:mystic?required.map(w=>w.stem):required.slice(0,1).map(w=>w.stem)};
-}
+// every stat the build lists is searched for, however many and however the build was made
+function targetStats(row){return row.wants;}
 function bestCandidate(candidates){return candidates.filter(candidate=>candidate.tier==='primal').sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
 function searchItems(row,items){
  const normalize=name=>String(name).replace(/\s*\([^)]*\)\s*$/,'').replace(/^the\s+/i,'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -112,7 +106,7 @@ function nextRow(){
  active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;row.limitedBy=null;
  const items=searchItems(row,info.items),item=items[0];
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
- row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);Object.assign(active.query,priorityQuery(row));active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
+ row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
 }
 function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(tiers.length-active.tier))});}
 // which limit ended the row's search, so the user knows what to change
