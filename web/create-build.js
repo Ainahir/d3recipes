@@ -1,10 +1,10 @@
-import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=import-conflicts-1';
-import { combo as itemCombo, esc } from './ui.js?v=1571023d0b';
-import { parseBuildToml } from './build-toml.js?v=create-build-import-1';
-import { combo } from './affix-picker.js?v=dispose-1';
+import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=96065c022e';
+import { combo as itemCombo, esc } from './ui.js?v=96065c022e';
+import { parseBuildToml } from './build-toml.js?v=96065c022e';
+import { combo } from './affix-picker.js?v=96065c022e';
 // randomUUID exists only on HTTPS and localhost pages; a self-hosted plain-HTTP page needs the fallback
 const uid=()=>globalThis.crypto?.randomUUID?.()??'b-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
-import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=1fc672fd23';
+import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=96065c022e';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
 const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders:['Shoulders'],Chest:['Chest','Cloak'],Hands:['Gloves'],Wrists:['Bracers'],Waist:['Belt','MightyBelt'],Legs:['Legs'],Feet:['Boots'],Amulet:['Amulet'],'Ring 1':['Ring'],'Ring 2':['Ring']};
@@ -13,7 +13,8 @@ let info,draft={id:null,name:'',class:0,slots:[]},generation=0;
 const pending=new Map();
 const pickers=new Map();
 function disposePicker(i){pickers.get(i)?.dispose();pickers.delete(i);}
-const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
+const V=new URL(import.meta.url).searchParams.get('v');
+const worker=new Worker('./worker.js'+(V?'?v='+V:''),{type:'module'});
 const notice=text=>{ $('status').textContent=text; if($('importStatus')) $('importStatus').textContent=text; };
 function listSaved(){try{$('saved').replaceChildren(new Option('Choose a saved build',''),...saved().map(b=>new Option(b.name,b.id)));}catch(e){notice(e.message);}}
 function candidates(slot){return info.items.filter(it=>it.classes.includes(draft.class)&&(pools[slot]?pools[slot].includes(it.slot):slot==='Main-hand'?/Sword|Axe|Mace|Dagger|Spear|Bow|Crossbow|HandXbow|Wand|Fist|Daibo|Flail|Scythe|Staff|Polearm|MightyWeapon/.test(it.slot):/Shield|Orb|Mojo|Quiver|Phylactery|Sword$|Axe$|Mace$|Dagger$|Spear$|Wand$|FistWeapon|HandXbow|Scythe1H|Flail1H|MightyWeapon1H/.test(it.slot))).sort((a,b)=>a.name.localeCompare(b.name));}

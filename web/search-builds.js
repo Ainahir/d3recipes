@@ -1,10 +1,11 @@
-import {baseQuery,pickHits} from './search-settings.js?v=build-table-1';
-import {readSettings,clonePanel,hitHtml,esc} from './ui.js?v=1571023d0b';
-import {statName,CLASS_NAMES} from './stats.js?v=1fc672fd23';
-import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=build-result-dom-1';
+import {baseQuery,pickHits} from './search-settings.js?v=96065c022e';
+import {readSettings,clonePanel,hitHtml,esc} from './ui.js?v=96065c022e';
+import {statName,CLASS_NAMES} from './stats.js?v=96065c022e';
+import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=96065c022e';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
-const worker=new Worker('./worker.js?v=worker-errors-1',{type:'module'});
+const V=new URL(import.meta.url).searchParams.get('v');
+const worker=new Worker('./worker.js'+(V?'?v='+V:''),{type:'module'});
 const tiers=['primal'];
 const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
@@ -64,7 +65,8 @@ function rowHtml(row){
  return `<section class="card slot"><h3>${esc(row.slot)}</h3>
   <div class="bhead"><span class="nm">${esc(items)}</span><span class="small"${imported?' title="Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export."':''}>${stats}</span></div>
   <label class="small"><input type="checkbox" data-row="${row.index}" style="width:auto" aria-label="${esc('Already have '+name)}"> Already have it</label>
-  <div id="build-match-${row.index}" class="small">Not searched</div></section>`;
+  <div id="build-match-${row.index}" class="small">Not searched</div>
+</section>`;
 }
 function renderBuild(){
  cancel();

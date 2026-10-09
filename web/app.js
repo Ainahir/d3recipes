@@ -1,10 +1,10 @@
-import {baseQuery,pickHits} from "./search-settings.js?v=build-table-1";
+import {baseQuery,pickHits} from "./search-settings.js?v=96065c022e";
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=1571023d0b";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=1571023d0b";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=96065c022e";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=96065c022e";
 
-import { combo, hitHtml, readSettings } from "./ui.js?v=1571023d0b";
+import { combo, hitHtml, readSettings } from "./ui.js?v=96065c022e";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
