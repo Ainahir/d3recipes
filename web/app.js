@@ -1,10 +1,10 @@
-import {baseQuery,pickHits} from "./search-settings.js?v=2b9855cfdd";
+import {baseQuery,pickHits} from "./search-settings.js?v=e5b5acbd86";
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=2b9855cfdd";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=2b9855cfdd";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=e5b5acbd86";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=e5b5acbd86";
 
-import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=2b9855cfdd";
+import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=e5b5acbd86";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -109,7 +109,7 @@ function start() {
   initContext();
   $("loading").hidden = true;
   $("app").hidden = false;
-  $("cls").innerHTML = info.classes.map((c, i) => `<option value="${i}">${className(c)}</option>`).join("");
+  $("cls").innerHTML = info.classes.map((c, i) => `<option value="${i}">${esc(className(c))}</option>`).join("");
   $("cls").addEventListener("change", loadStems);
   itemList = info.items;
   combo($("itemFind"), $("itemPick"), itemSource, "No matching item", pickItem);
@@ -126,14 +126,14 @@ function itemSource() {
   const q = $("itemFind").value.trim().toLowerCase();
   if (!q) return [];
   return itemList.filter((it) => it.name.toLowerCase().includes(q)).slice(0, 60)
-    .map((it) => ({ value: it, html: `${it.name} <span class="hint">${slotName(it.slot)}</span>` }));
+    .map((it) => ({ value: it, html: `${esc(it.name)} <span class="hint">${esc(slotName(it.slot))}</span>` }));
 }
 
 function statSource() {
   const q = $("find").value.trim().toLowerCase();
   const have = new Set(wants.map((w) => w.stem));
   return stemList.filter((s) => !have.has(s.stem) && (!q || s.name.toLowerCase().includes(q) || s.stem.toLowerCase().includes(q))).slice(0, 60)
-    .map((s) => ({ value: s.stem, html: s.name }));
+    .map((s) => ({ value: s.stem, html: esc(s.name) }));
 }
 
 function pickItem(it) {
@@ -148,7 +148,7 @@ function pickItem(it) {
 function renderItemChips() {
   const it = pickedItem;
   $("itemChips").innerHTML = it
-    ? `<div class="chip"><span>${it.name} <span class="hint">${slotName(it.slot)}</span></span><button title="Choose a different item" aria-label="Choose a different item">&times;</button></div>`
+    ? `<div class="chip"><span>${esc(it.name)} <span class="hint">${esc(slotName(it.slot))}</span></span><button title="Choose a different item" aria-label="Choose a different item">&times;</button></div>`
     : "";
   $("itemFind").hidden = !!it;
   if (!it) $("itemPick").hidden = true;
@@ -198,7 +198,7 @@ function clampMin(stem, v) {
 }
 
 function renderChips() {
-  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${statName(w.stem)}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" min="0"${statMax.has(w.stem) ? ` max="${statMax.get(w.stem)}" title="Highest this item can roll: ${isPct(w.stem) ? statMax.get(w.stem) + " %" : fmtValue(w.stem, statMax.get(w.stem))}"` : ""} placeholder="min${isPct(w.stem) ? " %" : ""}" value="${w.min}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
+  $("chips").innerHTML = wants.map((w, i) => `<div class="chip"><span>${esc(statName(w.stem))}</span>${w.stem === "Sockets" ? "" : `<input type="number" step="any" min="0"${statMax.has(w.stem) ? ` max="${statMax.get(w.stem)}" title="Highest this item can roll: ${isPct(w.stem) ? statMax.get(w.stem) + " %" : fmtValue(w.stem, statMax.get(w.stem))}"` : ""} placeholder="min${isPct(w.stem) ? " %" : ""}" value="${esc(w.min)}" data-i="${i}">`}<button data-x="${i}" title="Remove" aria-label="Remove">&times;</button></div>`).join("");
   $("chips").querySelectorAll("input").forEach((el) => {
     el.addEventListener("input", () => { wants[+el.dataset.i].min = el.value; });
     // out-of-range numbers are pulled back to the nearest roll the item can have when the box is left
@@ -454,7 +454,7 @@ const TIER_OF = { primal: "primal", crafted: "crafted", ancient: "ancient", norm
 function resultsHtml(run, final) {
   const snap = run.wantsSnap;
   let html = "";
-  if (run.warnings.size) html += `<div class="warn">${[...run.warnings].join("; ")}</div>`;
+  if (run.warnings.size) html += `<div class="warn">${[...run.warnings].map(esc).join("; ")}</div>`;
   // Drop any recipe that a better category matches or beats on cost with at least as many of the wanted stats
   // (e.g. a crafted primal that costs more than a natural primal): it would only be noise.
   const shown = [];

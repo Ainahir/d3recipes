@@ -1,7 +1,7 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Recipe rendering shared by the custom search (app.js) and the prepared builds (builds.js).
-import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=2b9855cfdd";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, fmtValue, materials, MATERIAL_ICONS, MATERIAL_GROUPS, SLOT_NAMES } from "./stats.js?v=e5b5acbd86";
 
 const slotName = (s) => SLOT_NAMES[s] || s;
 
@@ -165,7 +165,7 @@ export function parseRequestHash(hash) {
   const num = (k) => (q.has(k) && q.get(k) !== "" && !Number.isNaN(+q.get(k)) ? +q.get(k) : null);
   const c = num("c"), i = num("i");
   if (c === null || i === null) return null;
-  const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); return [d(s), d(v)]; });
+  const w = (q.get("w") || "").split(",").filter(Boolean).map((x) => { const [s, v = ""] = x.split("~"); const n = d(v); return [d(s), /^\d*\.?\d*$/.test(n) ? n : ""]; });
   const p = (q.get("p") || "").split(",").map(d);
   const season = Math.max(1, Math.round(num("s") || 40));
   return {
