@@ -2,8 +2,8 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=35e09eb329";
-import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=35e09eb329";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=c3c0236f63";
+import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=c3c0236f63";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -73,7 +73,7 @@ function fullTooltip(tt, need) {
   const want = new Set(need);
   const rows = tooltipRows(linesOf(tt)).map((r) => {
     const w = want.has(r.stem);
-    return `<span class="${w ? "want" : ""}">${r.label}</span><span class="v ${w ? "want" : ""}">${r.value}</span>`;
+    return `<span class="${w ? "want" : ""}">${esc(r.label)}</span><span class="v ${w ? "want" : ""}">${esc(r.value)}</span>`;
   }).join("");
   return `<details class="full" open><summary>Full tooltip</summary><div class="lines">${rows}</div></details>`;
 }
@@ -179,7 +179,7 @@ function navHtml(data) {
     if (!g) groups.push(g = { cls: b.class, list: [] });
     g.list.push(b);
   }
-  const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${id}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
+  const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${esc(id)}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
   return `<div class="grp">${btn("search", "Custom search", "mode")}</div>` + savedHtml() +
     (data.staples && data.staples.length ? `<div class="grp"><span class="gl">Any class</span>${btn("staples", "Staples")}${data.salvage && data.salvage.length ? btn("salvage", "Cheap primals") : ""}</div>` : "") +
     `<div class="grp"><span class="gl top">Builds</span></div>` +

@@ -1,8 +1,8 @@
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Shared page pieces: the type-ahead picker and the recipe result card, used by custom search and the build pages.
-import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=35e09eb329";
-import { matsHtml, stepsHtml, tooltipRows, supportsSanctify } from "./recipe.js?v=35e09eb329";
+import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=c3c0236f63";
+import { matsHtml, stepsHtml, tooltipRows, supportsSanctify } from "./recipe.js?v=c3c0236f63";
 
 // ---------- keyboard-navigable autocomplete ----------
 // source() -> [{html, value}] for the current text; Up/Down move, Enter (or click) picks, Escape closes.
