@@ -61,8 +61,9 @@ export function combo(input, box, source, emptyText, onPick) {
     const el = e.target.closest("[data-i]");
     if (el) { e.preventDefault(); pick(+el.dataset.i); }
   });
-  document.addEventListener("click", (e) => { if (e.target !== input && !box.contains(e.target)) close(); });
-  return { close };
+  const onDocClick = (e) => { if (e.target !== input && !box.contains(e.target)) close(); };
+  document.addEventListener("click", onDocClick);
+  return { close, dispose: () => document.removeEventListener("click", onDocClick) };
 }
 
 const TAGS = {

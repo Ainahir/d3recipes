@@ -1,9 +1,10 @@
 import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=import-conflicts-1';
+import { combo as itemCombo, esc } from './ui.js?v=1571023d0b';
 import { parseBuildToml } from './build-toml.js?v=create-build-import-1';
 import { combo } from './affix-picker.js?v=dispose-1';
 // randomUUID exists only on HTTPS and localhost pages; a self-hosted plain-HTTP page needs the fallback
 const uid=()=>globalThis.crypto?.randomUUID?.()??'b-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
-import { CLASS_NAMES, STATS, statName, HIDDEN } from './stats.js?v=1fc672fd23';
+import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=1fc672fd23';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
 const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders:['Shoulders'],Chest:['Chest','Cloak'],Hands:['Gloves'],Wrists:['Bracers'],Waist:['Belt','MightyBelt'],Legs:['Legs'],Feet:['Boots'],Amulet:['Amulet'],'Ring 1':['Ring'],'Ring 2':['Ring']};
@@ -18,16 +19,27 @@ function listSaved(){try{$('saved').replaceChildren(new Option('Choose a saved b
 function candidates(slot){return info.items.filter(it=>it.classes.includes(draft.class)&&(pools[slot]?pools[slot].includes(it.slot):slot==='Main-hand'?/Sword|Axe|Mace|Dagger|Spear|Bow|Crossbow|HandXbow|Wand|Fist|Daibo|Flail|Scythe|Staff|Polearm|MightyWeapon/.test(it.slot):/Shield|Orb|Mojo|Quiver|Phylactery|Sword$|Axe$|Mace$|Dagger$|Spear$|Wand$|FistWeapon|HandXbow|Scythe1H|Flail1H|MightyWeapon1H/.test(it.slot))).sort((a,b)=>a.name.localeCompare(b.name));}
 function definition(build=draft){const names={Head:'Helm',Hands:'Gloves',Wrists:'Bracers',Waist:'Belt',Legs:'Pants',Feet:'Boots','Main-hand':'Main-Hand','Off-hand':'Off-Hand'};return {name:build.name.trim(),class:info.classes[build.class],slot:build.slots.map(r=>({name:names[r.slot]||r.slot,...(r.any_item?{any_item:true,sets:r.sets??true}:{items:[r.externalName||info.items.find(it=>it.id===r.item).name,...(r.alternatives||[])]}),stat_priority:r.wants.map(w=>w.exportName||statName(w.stem)),...(r.notes?{notes:r.notes}:{})}))};}
 function toml(build=draft){const b=definition(build),q=JSON.stringify;return '[[build]]\nname = '+q(b.name)+'\nclass = '+q(b.class)+'\n'+b.slot.map(r=>'\n[[build.slot]]\nname = '+q(r.name)+'\n'+(r.any_item?'any_item = true\nsets = '+r.sets+'\n':'items = ['+r.items.map(q).join(', ')+']\n')+'stat_priority = ['+r.stat_priority.map(q).join(', ')+']\n'+(r.notes?'notes = ['+r.notes.map(q).join(', ')+']\n':'')).join('');}
-function render(){for(const i of pickers.keys())disposePicker(i);generation++;$('clone').hidden=!draft.id;$('name').value=draft.name;$('class').value=String(draft.class);$('exportPreview').hidden=true;$('slots').replaceChildren(...slots.map((slot,i)=>{
-  const row=draft.slots.find(r=>r.slot===slot),section=document.createElement('section');section.className='card';
-  const heading=document.createElement('h3');heading.textContent=slot;
-  const label=document.createElement('label');label.htmlFor='build-item-'+i;label.textContent='Item';
-  const select=document.createElement('select');select.id='build-item-'+i;select.dataset.row=String(i);select.add(new Option('Leave empty',''));
-  if(row&&!row.item)select.add(new Option(row.externalName||'Any item','imported',false,true));
-  for(const item of candidates(slot))select.add(new Option(item.name,String(item.id),false,row?.item===item.id));
-  const affixes=document.createElement('div');affixes.id='build-affixes-'+i;
-  section.append(heading,label,select,affixes);return section;
-}));$('slots').querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{const i=+el.dataset.row;draft.slots=draft.slots.filter(r=>r.slot!==slots[i]);if(el.value)draft.slots.push({slot:slots[i],item:+el.value,wants:[]});loadAffixes(i);}));slots.forEach((_,i)=>loadAffixes(i));}
+let itemCombos=[];
+function itemChip(i){
+  const row=draft.slots.find(r=>r.slot===slots[i]),chip=$('chip-'+i),input=$('item-'+i);
+  const name=row?(info.items.find(it=>it.id===row.item)?.name||row.externalName||'Any item'):'';
+  chip.innerHTML=row?`<div class="chip"><span>${esc(name)}</span><button type="button" title="Choose a different item" aria-label="Choose a different item for ${esc(slots[i])}">&times;</button></div>`:'';
+  input.hidden=!!row;if(row)$('pick-'+i).hidden=true;
+  chip.querySelector('button')?.addEventListener('click',()=>{draft.slots=draft.slots.filter(r=>r.slot!==slots[i]);itemChip(i);loadAffixes(i);input.focus();});
+}
+function render(){for(const i of pickers.keys())disposePicker(i);for(const c of itemCombos)c.dispose();itemCombos=[];generation++;$('clone').hidden=!draft.id;$('name').value=draft.name;$('class').value=String(draft.class);$('exportPreview').hidden=true;$('slots').replaceChildren(...slots.map((slot,i)=>{
+  const section=document.createElement('section');section.className='card';
+  section.innerHTML=`<h3>${esc(slot)}</h3><label for="build-item-${i}">Item</label><div id="build-chip-${i}" class="chips"></div>`+
+    `<input id="build-item-${i}" type="text" placeholder="Search items: crown, boots, quiver&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="build-pick-${i}">`+
+    `<div id="build-pick-${i}" class="pick" role="listbox" hidden></div><div id="build-affixes-${i}"></div>`;
+  return section;
+}));
+  slots.forEach((slot,i)=>{
+    const source=()=>{const q=$('item-'+i).value.trim().toLowerCase();return candidates(slot).filter(it=>!q||it.name.toLowerCase().includes(q)).slice(0,60).map(it=>({value:it,html:esc(it.name)+' <span class="hint">'+esc(SLOT_NAMES[it.slot]||it.slot)+'</span>'}));};
+    itemCombos.push(itemCombo($('item-'+i),$('pick-'+i),source,'No matching item',it=>{draft.slots=draft.slots.filter(r=>r.slot!==slot);draft.slots.push({slot,item:it.id,wants:[]});itemChip(i);loadAffixes(i);}));
+    itemChip(i);
+  });
+  slots.forEach((_,i)=>loadAffixes(i));}
 function loadAffixes(i){disposePicker(i);const row=draft.slots.find(r=>r.slot===slots[i]),box=$('affixes-'+i);box.replaceChildren();if(!row)return;const item=info.items.find(it=>it.id===row.item);if(!item){affixPicker({i,item:row.item},[]);return;}if(workerFailure){box.textContent=workerFailure;return;}const key=uid();pending.set(key,{i,generation,item:row.item});box.textContent='Loading affixes...';worker.postMessage({type:'stems',key,class:draft.class,slot:item.slot,item:row.item});}
 function affixPicker(request,stems){const row=draft.slots.find(r=>r.slot===slots[request.i]);if(!row||row.item!==request.item)return;row.wants=row.wants.filter(w=>w.imported||stems.includes(w.stem));const box=$('affixes-'+request.i),inputId='build-statFind-'+request.i,pickId='build-statPick-'+request.i;
 const label=document.createElement('label');label.htmlFor=inputId;label.textContent='Stats you want';
