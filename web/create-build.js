@@ -1,10 +1,10 @@
-import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=96065c022e';
-import { combo as itemCombo, esc } from './ui.js?v=96065c022e';
-import { parseBuildToml } from './build-toml.js?v=96065c022e';
-import { combo } from './affix-picker.js?v=96065c022e';
+import { KEY, readBuilds as saved, updateBuilds, importPlan, conflictSnapshot, applyImport } from './build-storage.js?v=f5984399b2';
+import { combo as itemCombo, esc } from './ui.js?v=f5984399b2';
+import { parseBuildToml } from './build-toml.js?v=f5984399b2';
+import { combo } from './affix-picker.js?v=f5984399b2';
 // randomUUID exists only on HTTPS and localhost pages; a self-hosted plain-HTTP page needs the fallback
 const uid=()=>globalThis.crypto?.randomUUID?.()??'b-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);
-import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=96065c022e';
+import { CLASS_NAMES, STATS, statName, HIDDEN, SLOT_NAMES } from './stats.js?v=f5984399b2';
 const $=id=>document.getElementById('build-'+id);
 const slots=['Head','Shoulders','Chest','Hands','Wrists','Waist','Legs','Feet','Amulet','Ring 1','Ring 2','Main-hand','Off-hand','Dual-Wield'];
 const pools={Head:['Helm','SpiritStone_Monk','VoodooMask','WizardHat'],Shoulders:['Shoulders'],Chest:['Chest','Cloak'],Hands:['Gloves'],Wrists:['Bracers'],Waist:['Belt','MightyBelt'],Legs:['Legs'],Feet:['Boots'],Amulet:['Amulet'],'Ring 1':['Ring'],'Ring 2':['Ring']};
