@@ -76,14 +76,18 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 - Hovering over **Most Sanctifications** now explains it: 0 turns Sanctification off whatever its cost, and an empty box means no limit. Thanks to Ainahir (#15).
 - Fixed weapons' on-hit crowd-control chances (Fear, Stun, Chill, Slow and so on) showing internal names such as "Weapon Hit Fear1h" in the stat list, and their values as 0: they now read "Chance to Fear on Hit" and show as percentages, like the same chances on other items. Damage against Beasts and against Undead (Monster Hunter, Corrupted Ashbringer) and Halcyon's Ascent's power ("Mesmerize on Archon" for a Wizard, and so on) got proper names too. Thanks to Ainahir (#14).
 
-**2026-10-07**
+<details>
+<summary><b>2026-10-07</b></summary>
 
 - Life per Hit, Life Regeneration, Life after Each Kill and Life per Fury Spent now show the number the game shows. The game cuts these big values down to a multiple of 2, 4, 8, 16 or 32 depending on size (Life per Hit 8,796 shows as 8,792, Life after Each Kill 17,385 as 17,376); the page used to cut every one of them to a multiple of 16, which was wrong below 16,384.
 - Custom search now has a **Primal only** box next to "Stats you want". Ticked, it looks for natural primals alone (no Improve Legendary, ancient or plain legendary results), so the whole time limit goes to them; it is kept in the search link and in saved searches.
 - The minimum for each wanted stat is now checked against the item: the box can't go below 0 or above the highest roll the item can have (Critical Hit Chance on an amulet tops out at 10%), and a typed number outside that is pulled back to the nearest roll the item can have, instead of silently searching for something impossible. Thanks to Rwede for both suggestions.
 - Fixed custom search not offering a Stone of Jordan's maximum-resource line (Maximum Discipline for a Demon Hunter, Fury for a Barbarian, and so on) under "Stats you want", although the ring rolls it. The list now includes what the game's last fixed-slot pass can pick. Thanks to Ainahir for finding it and tracing the cause (#12).
 
-**2026-10-06**
+</details>
+
+<details>
+<summary><b>2026-10-06</b></summary>
 
 - Fixed custom search showing recipes for the wrong item: for a set item, a Convert Set Item step could end the route on another piece of the set (a search for a chest could return shoulders), and the recipe was listed as if it made the item asked for. Every recipe now ends on the item you searched for. Thanks to Stroold and Rwede on Discord for documenting the bug.
 - Fixed custom search suggesting Mystic rolls the item can't take. The Mystic now follows the same rules as the game's rolls: no All Resistance next to a single resistance, no Life per Hit next to Life per Kill, one skill-damage line, and so on. Thanks to szymonos for the detailed report. (The prepared builds still show a few such steps until they are regenerated.)
@@ -102,7 +106,10 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 - Tests now run automatically on every push and pull request.
 - Staples now include the three follower tokens that make the follower unable to die: Enchanting Favor (Templar Relic), Smoking Thurible (Enchantress Focus) and Skeleton Key (Scoundrel Token). Any legendary of the slot will do, so each is a few Hope of Cain casts on a rare token.
 
-**2026-10-05**
+</details>
+
+<details>
+<summary><b>2026-10-05</b></summary>
 
 - Custom search can now ask for a Socket (any item that can roll one; weapons never do). Thanks to the guys on the Diablo Seasonal Database Discord for the suggestion.
 - The Mystic step now just says which stat to roll, and a "finish at Mystic" result is offered only when the item has a spare line of the same kind (primary or secondary) to swap out. The weapon damage range never counts.
@@ -110,11 +117,16 @@ Serve locally: `python -m http.server 8765 -d web` and open `http://localhost:87
 - **Save** keeps a search in a Saved list under Custom search. **All saved** shows every saved search computed for the season and mode chosen at the top; change them and press Recompute to refresh the whole list. Saved searches stay in your browser only.
 - The prepared builds are hidden when the selected season has none (only season 40 has them); custom search works for any season.
 
-**2026-10-04**
+</details>
+
+<details>
+<summary><b>2026-10-04</b></summary>
 
 - Fixed natural primal weapons: they never roll a socket, and a socket slot left open is replaced by an extra primary affix. The last Reforge of a weapon route now gives the affixes the game gives. Thanks to szymonos for documenting the bug.
 - Fixed the prepared builds' stat values for non-primal items. The rolls built into an item itself (such as a shield's) were skipped, so the "stop on" numbers and the cheaper legendary and ancient stop-offs were off. Which affixes an item gets, and every primal result, were already correct. Thanks to szymonos for documenting the bug.
 - The Mystic suggestion no longer picks a weapon's damage range to reroll, and picks the main stat only when nothing else is spare.
+
+</details>
 
 ## License
 
