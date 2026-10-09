@@ -64,8 +64,7 @@ function rowHtml(row){
  return `<section class="card slot"><h3>${esc(row.slot)}</h3>
   <div class="bhead"><span class="nm">${esc(items)}</span><span class="small"${imported?' title="Imported priorities: first two targets, third at the Mystic. Remaining priorities are retained for export."':''}>${stats}</span></div>
   <label class="small"><input type="checkbox" data-row="${row.index}" style="width:auto" aria-label="${esc('Already have '+name)}"> Already have it</label>
-  <div id="build-match-${row.index}" class="small">Not searched</div>
-  <div class="small">Cost <span id="build-cost-${row.index}">—</span></div></section>`;
+  <div id="build-match-${row.index}" class="small">Not searched</div></section>`;
 }
 function renderBuild(){
  cancel();
@@ -77,7 +76,6 @@ function renderBuild(){
 function setOwned(row,owned){
  row.owned=owned;row.best=null;row.results={};
  document.getElementById('build-match-'+row.index).textContent=owned?'Excluded from search':'Not searched';
- document.getElementById('build-cost-'+row.index).textContent='—';
  if(active){
    active.queue=active.queue.filter(queued=>queued!==row);
    if(owned&&active.row===row){worker.postMessage({type:'cancel'});job++;nextRow();}
@@ -123,7 +121,6 @@ function showMatches(row){
    const named=row.alternatives?.length;
    cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">Best found within limits</div>':'');
  }else cell.textContent='No matching recipe found'+(row.limited?' within limits':'');
- document.getElementById('build-cost-'+row.index).textContent=best?(best.hit.cost/100).toLocaleString(undefined,{maximumFractionDigits:2}):'—';
 }
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
@@ -131,8 +128,7 @@ worker.onmessage=({data:m})=>{
  else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});
-for(const el of document.querySelectorAll('#search-builds-costs input, #season, #hc'))el.addEventListener('change',()=>{if(active)cancel();for(const row of rows){row.best=null;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Settings changed — search again';document.getElementById('build-cost-'+row.index).textContent='—';}});
-
+for(const el of document.querySelectorAll('#search-builds-costs input, #season, #hc'))el.addEventListener('change',()=>{if(active)cancel();for(const row of rows){row.best=null;document.getElementById('build-match-'+row.index).textContent=row.owned?'Excluded from search':'Settings changed — search again';}});
 function engineFailed(message){
   if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+message;cancel();}
   info=null;$('run').disabled=true;status.textContent='Search engine unavailable: '+message+'. Reload the page to retry.';
