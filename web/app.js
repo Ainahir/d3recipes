@@ -1,10 +1,10 @@
-import {baseQuery,pickHits} from "./search-settings.js?v=c2c7c40959";
+import {baseQuery,pickHits} from "./search-settings.js?v=f88bec689a";
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
-import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=c2c7c40959";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=c2c7c40959";
+import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=f88bec689a";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=f88bec689a";
 
-import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=c2c7c40959";
+import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=f88bec689a";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -109,7 +109,7 @@ function start() {
   initContext();
   $("loading").hidden = true;
   $("app").hidden = false;
-  $("cls").innerHTML = info.classes.map((c, i) => `<option value="${i}">${esc(className(c))}</option>`).join("");
+  $("cls").innerHTML = info.classes.map((c, i) => [i, className(c)]).sort((x, y) => x[1].localeCompare(y[1])).map(([i, n]) => `<option value="${i}">${esc(n)}</option>`).join("");
   $("cls").addEventListener("change", loadStems);
   itemList = info.items;
   combo($("itemFind"), $("itemPick"), itemSource, "No matching item", pickItem);
