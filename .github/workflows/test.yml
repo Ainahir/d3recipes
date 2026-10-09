@@ -23,3 +23,9 @@ jobs:
         with:
           workspaces: core
       - run: cargo test --release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # the page's own tests (build import, storage, search queue, rendering); they load the real wasm and data
+      - run: node --test web/*.test.mjs
+        working-directory: .
