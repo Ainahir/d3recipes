@@ -32,3 +32,9 @@ test('real WASM accepts alternatives and imported priority/Mystic queries',async
     try{handle.run(10000);const results=JSON.parse(handle.results());assert.ok(results.status);for(const hit of [...results.full,...results.near])assert.ok(items.some(item=>item.name===hit.name),hit.name);}finally{handle.free();}
   }
 });
+
+test('imported priorities never stop the search at the first route one stat short',()=>{
+  const row={wants:[{stem:'ArcanePowerOnCrit',imported:true},{stem:'CriticalChance',imported:true},{stem:'CooldownReduction',imported:true}]};
+  const q=context.priorityQuery(row);
+  assert.equal(q.end_on_near,false);assert.equal(q.min_match,2);assert.deepEqual(Array.from(q.mystic),['CooldownReduction']);
+});

@@ -94,8 +94,9 @@ $('run').addEventListener('click',()=>{
 function targetStats(row){return row.wants.some(w=>w.imported)?row.wants.slice(0,3):row.wants;}
 function priorityQuery(row){
  if(!row.wants.some(w=>w.imported))return {};
+ // the Mystic is kept for the last priority, so a route one stat short of the first two is not a stopping point (custom search's early stop assumes the Mystic can finish it)
  const targets=targetStats(row),required=targets.slice(0,2),mystic=targets[2];
- return {wants:required.map(w=>({fam:[w.stem],min:w.min})),min_match:mystic?required.length:Math.min(1,required.length),mystic_finish:true,mystic:mystic?[mystic.stem]:[],keep:mystic?required.map(w=>w.stem):required.slice(0,1).map(w=>w.stem)};
+ return {wants:required.map(w=>({fam:[w.stem],min:w.min})),min_match:mystic?required.length:Math.min(1,required.length),mystic_finish:true,end_on_near:false,mystic:mystic?[mystic.stem]:[],keep:mystic?required.map(w=>w.stem):required.slice(0,1).map(w=>w.stem)};
 }
 function bestCandidate(candidates){return candidates.filter(candidate=>candidate.tier==='primal').sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
 function searchItems(row,items){
