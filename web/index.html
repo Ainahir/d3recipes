@@ -156,9 +156,10 @@
     background: var(--bg); border-bottom: 1px solid var(--line); scrollbar-width: thin; }
   nav#nav .grp { display: contents; }
   nav#nav .gl { flex: none; margin-left: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
-  nav#nav button.nb { flex: none; font: inherit; font-size: .92rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
-  nav#nav button.nb[aria-current="page"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 600; }
-  nav#nav button.nb.mode { border-style: dashed; }
+  nav#nav .nb { flex: none; font: inherit; font-size: .92rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  nav#nav a.nb { display: block; box-sizing: border-box; text-decoration: none; }
+  nav#nav .nb[aria-current="page"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  nav#nav .nb.mode { border-style: dashed; }
   nav#nav .gl.top { display: none; }
   #content { min-width: 0; max-width: 760px; }
   @media (min-width: 900px) {
@@ -172,9 +173,9 @@
     nav#nav .grp { display: block; }
     nav#nav .gl { display: block; margin: 16px 0 4px 10px; }
     nav#nav .gl.top { display: block; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-    nav#nav button.nb { width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 8px 10px; }
-    nav#nav button.nb:hover { background: var(--chip); }
-    nav#nav button.nb[aria-current="page"] { color: var(--text); background: var(--chip); border-left-color: var(--accent); }
+    nav#nav .nb { width: 100%; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 8px 10px; }
+    nav#nav .nb:hover { background: var(--chip); }
+    nav#nav .nb[aria-current="page"] { color: var(--text); background: var(--chip); border-left-color: var(--accent); }
     .banner-wrap { margin-left: 0; margin-right: 0; }
     header.top .tagline { text-align: center; }
   }
@@ -349,9 +350,9 @@
 
 </div>
 <script defer src="analytics.js"></script>
-<script type="module" src="builds.js?v=e5b5acbd86"></script>
-<script type="module" src="app.js?v=e5b5acbd86"></script>
-<script type="module" src="create-build.js?v=e5b5acbd86"></script>
-<script type="module" src="search-builds.js?v=e5b5acbd86"></script>
+<script type="module" src="builds.js?v=c2c7c40959"></script>
+<script type="module" src="app.js?v=c2c7c40959"></script>
+<script type="module" src="create-build.js?v=c2c7c40959"></script>
+<script type="module" src="search-builds.js?v=c2c7c40959"></script>
 </body>
 </html>

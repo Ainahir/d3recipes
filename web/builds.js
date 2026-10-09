@@ -2,9 +2,9 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Prepared builds: the side/top navigation and the per-build recipe pages. Reads premade_sc.json / premade_hc.json
 // (see export_premade.py); needs no wasm, so it is usable before the search engine has finished loading.
-import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=e5b5acbd86";
-import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=e5b5acbd86";
-import { esc } from "./ui.js?v=e5b5acbd86";
+import { statName, statAbbr, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=c2c7c40959";
+import { stepsHtml, matsHtml, tooltipRows, savedList, requestHash } from "./recipe.js?v=c2c7c40959";
+import { esc } from "./ui.js?v=c2c7c40959";
 
 const $ = (id) => document.getElementById(id);
 const V = new URL(import.meta.url).searchParams.get("v");
@@ -159,18 +159,22 @@ function salvageHtml(data) {
 // the lists are rolled for one season; for any other season they would not match, so they are not offered
 const listed = (data) => (Math.max(1, Math.round(+$("season").value || 40))) === data.season;
 
+// Sidebar entries are real links, so Open in new tab works; a plain click is still handled here (see the nav click handler).
+const hrefOf = (id) => (id === "search" ? location.pathname + location.search : "#" + encodeURIComponent(id));
+const navLink = (id, label, cls = "") => `<a class="nb ${cls}" href="${esc(hrefOf(id))}" data-route="${esc(id)}"${route === id ? ' aria-current="page"' : ""}>${label}</a>`;
+
 // Saved requests sit right under Custom search. Each opens as a search link for the season and mode chosen now.
 function savedHtml() {
   const saved = savedList();
   if (!saved.length) return "";
   const season = Math.max(1, Math.round(+$("season").value || 40)), hc = $("hc").value === "1";
-  return `<div class="grp"><span class="gl">Saved</span><button type="button" class="nb"${route === "saved" ? ' aria-current="page"' : ""} data-route="saved">All saved (${saved.length})</button>` +
-    saved.map((e) => `<button type="button" class="nb" data-link="${esc(requestHash(e.req, season, hc))}">${esc(e.label)}</button>`).join("") + `</div>`;
+  return `<div class="grp"><span class="gl">Saved</span>${navLink("saved", `All saved (${saved.length})`)}` +
+    saved.map((e) => { const h = esc(requestHash(e.req, season, hc)); return `<a class="nb" href="${h}" data-link="${h}">${esc(e.label)}</a>`; }).join("") + `</div>`;
 }
 
 function navHtml(data) {
   if (!listed(data)) {
-    return `<div class="grp"><button type="button" class="nb mode"${route === "search" ? ' aria-current="page"' : ""} data-route="search">Custom search</button><button type="button" class="nb mode" data-route="create-build">Edit builds</button><button type="button" class="nb mode" data-route="search-builds">Search build items</button></div>` + savedHtml() +
+    return `<div class="grp">${navLink("search", "Custom search", "mode")}${navLink("create-build", "Edit builds", "mode")}${navLink("search-builds", "Search build items", "mode")}</div>` + savedHtml() +
       `<div class="grp"><span class="small">No prepared builds for season ${Math.max(1, Math.round(+$("season").value || 40))}. Custom search works for any season.</span></div>`;
   }
   const groups = [];
@@ -179,7 +183,7 @@ function navHtml(data) {
     if (!g) groups.push(g = { cls: b.class, list: [] });
     g.list.push(b);
   }
-  const btn = (id, label, cls = "") => `<button type="button" class="nb ${cls}" data-route="${esc(id)}"${route === id ? ' aria-current="page"' : ""}>${label}</button>`;
+  const btn = navLink;
   return `<div class="grp">${btn("search", "Custom search", "mode")}${btn("create-build", "Edit builds", "mode")}${btn("search-builds", "Search build items", "mode")}</div>` + savedHtml() +
     (data.staples && data.staples.length ? `<div class="grp"><span class="gl">Any class</span>${btn("staples", "Staples")}${data.salvage && data.salvage.length ? btn("salvage", "Cheap primals") : ""}</div>` : "") +
     `<div class="grp"><span class="gl top">Builds</span></div>` +
@@ -242,9 +246,11 @@ async function refresh() {
 
 // Recipes open and close from a click almost anywhere: on the card around a single recipe, or on the recipe itself (its summary
 // already toggles natively, so nested summaries and links are left alone). Selecting text never counts as a click.
+// a plain left click is handled in the page; Ctrl, Cmd, Shift, Alt or a middle click is left to the browser (new tab or window)
+const plain = (e) => e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey;
 $("viewBuild").addEventListener("click", (e) => {
   const link = e.target.closest("a[data-route]");
-  if (link) { e.preventDefault(); go(link.dataset.route); return; }
+  if (link) { if (plain(e)) { e.preventDefault(); go(link.dataset.route); } return; }
   if (String(window.getSelection()).length || e.target.closest("a, button")) return;
   const rec = e.target.closest("details.rec");
   if (rec) {
@@ -255,12 +261,12 @@ $("viewBuild").addEventListener("click", (e) => {
   const card = e.target.closest("section.slot.single");
   if (card) { const r = card.querySelector(":scope > details.rec"); r.open = !r.open; }
 });
-$("home").addEventListener("click", (e) => { e.preventDefault(); go("search"); });
+$("home").addEventListener("click", (e) => { if (!plain(e)) return; e.preventDefault(); go("search"); });
 $("nav").addEventListener("click", (e) => {
-  const l = e.target.closest("button[data-link]");
-  if (l) { location.hash = l.dataset.link.slice(1); window.scrollTo({ top: 0 }); return; }
-  const b = e.target.closest("button[data-route]");
-  if (b) go(b.dataset.route);
+  const a = e.target.closest("a[data-link], a[data-route]");
+  if (!a || !plain(e)) return;
+  e.preventDefault();
+  if (a.dataset.link) { location.hash = a.dataset.link.slice(1); window.scrollTo({ top: 0 }); } else go(a.dataset.route);
 });
 window.addEventListener("d3-saved", show);
 window.addEventListener("d3-navigate", event => go(event.detail));
