@@ -11,7 +11,7 @@ const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
 const key = 'd3recipes-user-builds-v1';
 // The cost and limit boxes are custom search's own, copied, so both pages offer the same ones.
-const panel=clonePanel('search-builds-');panel.id='search-builds-costs';document.getElementById('search-builds-costs-slot').replaceWith(panel);
+const panel=clonePanel('search-builds-');panel.id='search-builds-costs';panel.querySelector('label[for="search-builds-secs"]').textContent='Time limit per item (s)';document.getElementById('search-builds-costs-slot').replaceWith(panel);
 let capEdited=false;
 function updateSanctify(){
   const season=Math.max(1,Math.round(+document.getElementById('season').value||40));
@@ -123,7 +123,7 @@ function showMatches(row){
  if(chosen.length){
    const named=row.alternatives?.length;
    cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">Best found within limits</div>':'');
- }else cell.textContent='No matching recipe found'+(row.limited?' within limits':'');
+ }else cell.textContent='No matching recipe found'+(row.limited?' within limits. A longer time limit may find one.':'');
 }
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
