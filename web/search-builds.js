@@ -1,12 +1,11 @@
 import {baseQuery,pickHits} from './search-settings.js?v=f88bec689a';
-import {readSettings,clonePanel,hitHtml,esc,searchStarted,searchEnded} from './ui.js?v=f88bec689a';
+import {readSettings,clonePanel,hitHtml,esc,searchStarted,searchEnded} from './ui.js?v=crucible-last-8';
 import {statName,CLASS_NAMES} from './stats.js?v=f88bec689a';
-import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=f88bec689a';
+import {supportsSanctify,defaultSanctifyCap} from './recipe.js?v=crucible-last-8';
 const $=id=>document.getElementById('search-builds-'+id);
 let info,build,rows=[],active=null,job=0;
 const V=new URL(import.meta.url).searchParams.get('v');
 const worker=new Worker('./worker.js'+(V?'?v='+V:''),{type:'module'});
-const tiers=['primal'];
 const select = document.getElementById('search-builds-saved');
 const status = document.getElementById('search-builds-status');
 const key = 'd3recipes-user-builds-v1';
@@ -63,16 +62,42 @@ function rowHtml(row){
  const name=row.externalName||info?.items.find(it=>it.id===row.item)?.name||row.slot;
  return `<section class="card slot"><h3>${esc(row.slot)}</h3>
   <div class="bhead"><span class="nm">${esc(items)}</span><span class="small">${stats}</span></div>
+  <div class="build-row-options" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
   <label class="small"><input type="checkbox" data-row="${row.index}" style="width:auto" aria-label="${esc('Already have '+name)}"> Already have it</label>
+  <label class="small"><input type="checkbox" data-crafted="${row.index}" style="width:auto"> Search crafted</label>
+  <label class="small"><input type="checkbox" data-sanctified="${row.index}" style="width:auto"> Search sanctified</label>
+  </div>
   <div id="build-match-${row.index}" class="small">Not searched</div>
 </section>`;
 }
 function renderBuild(){
  cancel();
- try{build=JSON.parse(localStorage.getItem(key)||'[]').find(b=>b.id===select.value);rows=(build?.slots||[]).map((r,i)=>({...r,index:i,owned:false,results:{}}));
+ try{build=JSON.parse(localStorage.getItem(key)||'[]').find(b=>b.id===select.value);rows=(build?.slots||[]).map((r,i)=>({...r,index:i,owned:false,searchCrafted:false,searchSanctified:false,results:{}}));
  $('rows').innerHTML=rows.map(rowHtml).join('');
- $('rows').querySelectorAll('input').forEach(el=>el.addEventListener('change',()=>setOwned(rows[+el.dataset.row],el.checked)));$('run').disabled=!info||!build;
+ $('rows').querySelectorAll('.build-row-options input').forEach(el=>el.addEventListener('change',()=>handleRowOption(el)));$('run').disabled=!info||!build;
  }catch(e){status.textContent=e.message;}
+}
+function handleRowOption(el){
+  const index=+(el.dataset.row??el.dataset.crafted??el.dataset.sanctified),row=rows[index];
+  if(active && el.dataset.row===undefined) {
+   cancel();
+   for(const previous of rows) {
+    previous.results={};previous.best=null;previous.limited=false;previous.limitedBy=null;
+    document.getElementById('build-match-'+previous.index).textContent=previous.owned?'Excluded from search':'Search cancelled — search again';
+   }
+   status.textContent='Build search cancelled because an item search option changed. Search again to update results.';
+  }
+  if(el.checked) {
+   row.owned=false;row.searchCrafted=false;row.searchSanctified=false;
+   for(const other of el.closest('.build-row-options').querySelectorAll('input'))if(other!==el)other.checked=false;
+  }
+  if(el.dataset.row!==undefined)setOwned(row,el.checked);
+  else {
+   row[el.dataset.crafted!==undefined?'searchCrafted':'searchSanctified']=el.checked;
+   row.results={};row.best=null;
+   document.getElementById('build-match-'+index).textContent='Search options changed — search again';
+  }
+
 }
 function setOwned(row,owned){
  row.owned=owned;row.best=null;row.results={};
@@ -94,7 +119,7 @@ $('run').addEventListener('click',()=>{
 });
 // every stat the build lists is searched for, however many and however the build was made
 function targetStats(row){return row.wants;}
-function bestCandidate(candidates){return candidates.filter(candidate=>candidate.tier==='primal').sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
+function bestCandidate(candidates){return candidates.filter(candidate=>['primal','crafted','sanctified'].includes(candidate.tier)).sort((a,b)=>b.hit.matched.length-a.hit.matched.length||a.hit.cost-b.hit.cost)[0];}
 function searchItems(row,items){
  const normalize=name=>String(name).replace(/\s*\([^)]*\)\s*$/,'').replace(/^the\s+/i,'').toLowerCase().replace(/[^a-z0-9]/g,'');
  const alternatives=new Set((row.alternatives||[]).map(normalize));
@@ -103,27 +128,28 @@ function searchItems(row,items){
 function nextRow(){
  let row=active.queue.shift();while(row?.owned)row=active.queue.shift();
  if(!row){cancel();status.textContent='Build search complete. Costs use the selected weights.';return;}
- active.row=row;active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;row.limitedBy=null;
+ active.row=row;active.tiers=[row.searchSanctified?'sanctified':row.searchCrafted?'crafted':'primal'];active.tier=0;active.deadline=performance.now()+active.secs*1000;row.results={};row.best=null;row.limited=false;row.limitedBy=null;
  const items=searchItems(row,info.items),item=items[0];
  if(!item){document.getElementById('build-match-'+row.index).textContent=row.any_item?'Choose a specific item in the editor before searching.':'Item unavailable.';nextRow();return;}
  row.itemData=item;active.query=baseQuery({...active.settings,w:row.wants.map(w=>[w.stem,w.min==null?'':String(w.min)])},item,active.season,active.hc);active.query.items=items.map(item=>item.id);active.query.slots=[...new Set(items.map(item=>item.slot))];startTier();
 }
-function startTier(){const tier=tiers[active.tier];status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(tiers.length-active.tier))});}
+function startTier(){const tier=active.tiers[active.tier];if(tier==='sanctified'&&(!supportsSanctify(active.season)||active.query.max_sanctify<1)){document.getElementById('build-match-'+active.row.index).textContent='Sanctified search unavailable: check the season and Most Sanctifications limit.';nextRow();return;}status.textContent='Searching '+active.row.itemData.name+' ('+tier+')...';worker.postMessage({type:'search',id:++job,query:{...active.query,quality:tier,end_on_primalize:tier==='crafted'},budgetMs:Math.max(1500,Math.max(1000,active.deadline-performance.now())/(active.tiers.length-active.tier))});}
 // which limit ended the row's search, so the user knows what to change
 function limitNote(row){return row.limitedBy==='size'?'The search reached its size limit, so a cheaper recipe may exist.':'The search stopped at the time limit; a longer limit may find a better recipe.';}
 function showMatches(row){
  const snap=targetStats(row).map(w=>w.stem);let chosen=[];
- for(const tier of tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
+ for(const tier of active.tiers){if(!row.results[tier])continue;for(const hit of pickHits(tier,row.results[tier],snap,active.settings.n)){chosen.push({tier,hit});}}
  const best=bestCandidate(chosen);row.best=best;if(best)row.itemData=info.items.find(item=>item.name===best.hit.name)||row.itemData;
  const cell=document.getElementById('build-match-'+row.index);
  if(chosen.length){
    const named=row.alternatives?.length;
    cell.innerHTML=chosen.map(({tier,hit})=>(named?`<div class="nm">${esc(hit.name)}</div>`:'')+hitHtml(hit,tier,snap,row.itemData,build.class,active.season,heroName)).join('')+(row.limited?'<div class="small">'+limitNote(row)+'</div>':'');
  }else cell.textContent='No matching recipe found.'+(row.limited?' '+limitNote(row):'');
+ if(row.searchSanctified&&!supportsSanctify(active.season))cell.insertAdjacentHTML('beforeend','<div class="small">Sanctified search skipped: Sanctification is unavailable in this season.</div>');
 }
 worker.onmessage=({data:m})=>{
  if(m.type==='ready'){info=m.info;if(select.value)renderBuild();$('run').disabled=!build;}
- else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[tiers[active.tier]]=m.results;if(m.results.status.capped){row.limited=true;row.limitedBy='size';}else if(m.type==='done'&&!m.results.status.done&&!row.limited){row.limited=true;row.limitedBy='time';}showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<tiers.length)startTier();else nextRow();}}
+ else if(active&&m.id===job&&(m.type==='progress'||m.type==='done')){const row=active.row;row.results[active.tiers[active.tier]]=m.results;if(m.results.status.capped){row.limited=true;row.limitedBy='size';}else if(m.type==='done'&&!m.results.status.done&&!row.limited){row.limited=true;row.limitedBy='time';}showMatches(row);if(m.type==='done'){active.tier++;if(active.tier<active.tiers.length)startTier();else nextRow();}}
  else if(m.type==='error'){if(m.key!==undefined)return;if(m.id!==undefined&&(!active||m.id!==job))return;if(m.id===undefined){engineFailed(m.message);return;}if(active){document.getElementById('build-match-'+active.row.index).textContent='Search failed: '+m.message;nextRow();}else status.textContent='Search engine: '+m.message;}
 };
 window.addEventListener('d3-route',event=>{if(event.detail!=='search-builds'&&active)cancel();});

@@ -18,6 +18,7 @@ pub enum Q {
     Ancient = 1,
     Primal = 2, // natural primal (Hope of Cain / Reforge roll)
     Crafted = 3, // Improve Legendary result
+    Sanctified = 4, // Angelic Crucible result
 }
 
 impl Q {
@@ -27,6 +28,7 @@ impl Q {
             Q::Ancient => "ancient",
             Q::Primal => "primal",
             Q::Crafted => "crafted",
+            Q::Sanctified => "sanctified",
         }
     }
 }
@@ -109,7 +111,7 @@ pub struct Query {
     pub cost_p: u64,
     #[serde(default = "d_one")]
     pub cost_c: u64,
-    /// "any" | "normal" | "ancient" | "primal" (natural) | "crafted" | "anyprimal"
+    /// "any" | "normal" | "ancient" | "primal" (natural) | "crafted" | "sanctified" | "anyprimal"
     #[serde(default = "d_quality")]
     pub quality: String,
     #[serde(default)]
@@ -524,6 +526,7 @@ impl Search {
         match q {
             Q::Primal | Q::Ancient => true,
             Q::Normal => matches!(self.quality.as_str(), "any" | "normal"),
+            Q::Sanctified => matches!(self.quality.as_str(), "any" | "sanctified"),
             Q::Crafted => self.q.end_on_primalize && matches!(self.quality.as_str(), "any" | "crafted" | "anyprimal"),
         }
     }
@@ -536,9 +539,23 @@ impl Search {
             "ancient+" => q == Q::Ancient || q == Q::Primal,
             "primal" => q == Q::Primal,
             "crafted" => q == Q::Crafted,
+            "sanctified" => q == Q::Sanctified,
             "anyprimal" => q == Q::Primal || q == Q::Crafted,
             _ => true,
         }
+    }
+
+    // Six-affix rolls replace the last secondary; shorter rolls keep every ordinary affix.
+    fn sanctified_affixes(&self, aff: &[usize]) -> Vec<usize> {
+        if aff.len() != 6 { return aff.to_vec(); }
+        let replaced = aff.iter().rposition(|&a| self.d.affixes[a].kind == 1);
+        aff.iter().copied().enumerate().filter_map(|(i, a)| {
+            if Some(i) == replaced { None } else { Some(a) }
+        }).collect()
+    }
+
+    fn sanctified_power() -> LineOut {
+        LineOut { label: "sanctified power".into(), stem: "sanctified power".into(), value: 0.0, max: 0.0 }
     }
 
     fn make_lines(&self, aff: &[usize], raw: Vec<Line>, mx: Option<Vec<Line>>) -> Vec<LineOut> {
@@ -632,12 +649,20 @@ impl Search {
         if q == Q::Crafted && !self.q.end_on_primalize {
             return;
         }
+        let visible_aff;
+        let visible_raw;
+        let (aff, raw) = if q == Q::Sanctified {
+            visible_aff = self.sanctified_affixes(aff);
+            visible_raw = raw.into_iter().filter(|l| l.aff.map_or(true, |a| visible_aff.contains(&a))).collect();
+            (visible_aff.as_slice(), visible_raw)
+        } else { (aff, raw) };
         // a search for given items only answers with those items: a Convert step can move the route onto a set-mate
         if !self.q.items.is_empty() && !self.q.items.contains(&self.d.items[item].id) {
             return;
         }
-        let mx =if matches!(q, Q::Primal | Q::Crafted) { None } else { Some(self.sim.values_max(item, aff)) };
-        let lines = self.make_lines(aff, raw, mx);
+        let mx =if matches!(q, Q::Primal | Q::Crafted | Q::Sanctified) { None } else { Some(self.sim.values_max(item, aff)) };
+        let mut lines = self.make_lines(aff, raw, mx);
+        if q == Q::Sanctified { lines.push(Self::sanctified_power()); }
         let matched = self.matched(&lines);
         let qual_ok = self.quality_ok(q);
         let nw = self.wants_lc.len();
@@ -815,7 +840,7 @@ impl Search {
                 }
                 b'S' => {
                     let (aff, child) = self.sim.sanctify(item, seed);
-                    (item, child, aff, Q::Crafted, pc, sc.saturating_add(1), cc)
+                    (item, child, aff, Q::Sanctified, pc, sc.saturating_add(1), cc)
                 }
                 _ => {
                     let g = self.sim.convert(item, seed);
@@ -826,15 +851,15 @@ impl Search {
             let new = self.admit(self.key(target as u32, child, next_pc, next_sc, next_cc,
                 swn(c), depth + 1), next_cost);
             // Endpoint eligibility is independent of continuation merging.
-            // Sanctify stays preparation only; ashes can still finish a recipe.
-            let register = op != b'S' && self.need_lines(quality);
+            // Only the requested hero can supply the final seasonal power.
+            let register = self.need_lines(quality) && (op != b'S' || c == self.q.class);
             if new || register {
                 let cidx = self.nodes.len() as u32;
                 self.nodes.push(NodeRec { item: target as u32, seed: child, q: quality,
                     pc: next_pc, sc: next_sc, cc: next_cc, sw: swn(c), depth: depth + 1,
                     parent: idx, op, cls: c as u8, slot, n: n0 });
                 if register {
-                    let raw = if matches!(quality, Q::Primal | Q::Crafted) {
+                    let raw = if matches!(quality, Q::Primal | Q::Crafted | Q::Sanctified) {
                         self.sim.values_max(target, &aff)
                     } else { self.sim.values(target, child, &aff) };
                     self.register(cidx, next_cost, quality, target, &aff, raw);
@@ -950,8 +975,13 @@ impl Search {
                     }
                 }
             };
-            let mx = if matches!(q, Q::Primal | Q::Crafted) { None } else { Some(self.sim.values_max(item, &aff)) };
-            let lines = self.make_lines(&aff, raw, mx);
+            let mx = if matches!(q, Q::Primal | Q::Crafted | Q::Sanctified) { None } else { Some(self.sim.values_max(item, &aff)) };
+            let mut lines = if q == Q::Sanctified {
+                let visible = self.sanctified_affixes(&aff);
+                let raw = raw.into_iter().filter(|l| l.aff.map_or(true, |a| visible.contains(&a))).collect();
+                self.make_lines(&visible, raw, None)
+            } else { self.make_lines(&aff, raw, mx) };
+            if q == Q::Sanctified { lines.push(Self::sanctified_power()); }
             states.push(Checkpoint { name: self.d.items[item].name.clone(), quality: q.name().to_string(), lines });
         }
         self.sim.hero = self.q.class;
@@ -997,6 +1027,65 @@ mod cost_tracking_tests {
             "maxpos":1,"maxsteps":maxsteps,"quality":"crafted","max_primalize":2,
             "max_sanctify":255,"max_convert":0,"max_switch":2})).unwrap();
         Search::new(d,q)
+    }
+
+    #[test]
+    fn sanctified_replacement_depends_on_affix_count() {
+        let s = search(1);
+        let primary: Vec<_> = s.d.affixes.iter().enumerate().filter(|(_, a)| a.kind == 0).take(4).map(|(i, _)| i).collect();
+        let secondary: Vec<_> = s.d.affixes.iter().enumerate().filter(|(_, a)| a.kind == 1).take(2).map(|(i, _)| i).collect();
+        let five: Vec<_> = primary[..3].iter().chain(secondary.iter()).copied().collect();
+        assert_eq!(s.sanctified_affixes(&five), five);
+        let six: Vec<_> = primary.iter().chain(secondary.iter()).copied().collect();
+        assert_eq!(s.sanctified_affixes(&six), six[..5]);
+    }
+
+    #[test]
+    fn sanctified_endpoints_use_requested_class_and_visible_secondaries() {
+        let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q = serde_json::from_value(serde_json::json!({"class":0,"season":40,"slots":["Quiver"],
+            "maxpos":4,"maxsteps":1,"quality":"sanctified","max_primalize":1,
+            "max_sanctify":1,"switch":[1],"max_switch":1,"top":100})).unwrap();
+        let mut s = Search::new(d,q);
+        let roots = s.nodes.len();
+        for idx in 0..roots { s.expand(idx as u32, 1); }
+        assert!(!s.full.is_empty());
+        assert!(s.nodes.iter().any(|n| n.op == b'S' && n.cls == 1));
+        for (_, h) in &s.full {
+            assert_eq!(h.quality, "sanctified");
+            assert_eq!(h.route.last().unwrap().0, 'S');
+            assert_eq!(h.route_class.last(), Some(&0));
+            assert_eq!(h.lines.iter().filter(|l| l.stem == "sanctified power").count(), 1);
+        }
+        let item = s.nodes[0].item as usize;
+        for seed in 1..100 {
+            let (aff, _) = s.sim.sanctify(item, seed);
+            let visible = s.sanctified_affixes(&aff);
+            if aff.len() == 6 {
+                assert_eq!(visible.len(), aff.len() - 1);
+            } else {
+                assert_eq!(visible, aff);
+            }
+            for a in aff.iter().filter(|a| !visible.contains(a)) {
+                assert_eq!(s.d.affixes[*a].kind, 1);
+            }
+        }
+    }
+
+    #[test]
+    fn off_class_sanctification_continues_to_requested_class_endpoint() {
+        let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q = serde_json::from_value(serde_json::json!({"class":0,"season":40,"slots":["Helm"],
+            "maxpos":1,"maxsteps":2,"quality":"sanctified","max_primalize":0,
+            "max_sanctify":2,"max_convert":0,"switch":[1],"max_switch":2,"top":100,
+            "cost_h":1,"cost_s":1,"cost_r":10000})).unwrap();
+        let mut s = Search::new(d,q);
+        while !s.run(1000) {}
+        let results = s.results();
+        assert!(results.full.iter().any(|h| {
+            h.quality == "sanctified" && h.route == vec![('S', 1), ('S', 1)]
+                && h.route_class == vec![1, 0]
+        }), "an off-class Sanctification must continue to a full selected-class Sanctified result");
     }
 
     #[test]

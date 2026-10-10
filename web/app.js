@@ -2,9 +2,9 @@ import {baseQuery,pickHits} from "./search-settings.js?v=f88bec689a";
 // Copyright 2026 FNG. Use, modification and redistribution are permitted under the conditions in LICENSE:
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 import { statName, statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, fmtValue, isPct, HIDDEN, CLASS_NAMES, SLOT_NAMES, materials } from "./stats.js?v=f88bec689a";
-import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=f88bec689a";
+import { slotPlural, matsHtml, stepsHtml, mysticCanFinish, tooltipRows, requestHash, parseRequestHash, savedList, savedHas, savedToggle, savedRemove, DEFAULT_CONVERTS, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=crucible-last-8";
 
-import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=f88bec689a";
+import { combo, hitHtml, readSettings, searchStarted, searchEnded } from "./ui.js?v=crucible-last-8";
 
 const $ = (id) => document.getElementById(id);
 // Forward the cache-busting version index.html stamped onto our own src= down to the worker, which forwards it
@@ -115,6 +115,9 @@ function start() {
   combo($("itemFind"), $("itemPick"), itemSource, "No matching item", pickItem);
   combo($("find"), $("pick"), statSource, "No matching stat on this item", (stem) => { wants.push({ stem, min: "" }); renderChips(); });
   $("go").addEventListener("click", go);
+  for (const id of ["po", "co", "so"]) $(id).addEventListener("change", () => {
+    if ($(id).checked) for (const other of ["po", "co", "so"]) if (other !== id) $(other).checked = false;
+  });
   initActions();
   updateSanctifyControls(); $("season").addEventListener("input", updateSanctifyControls);
   $("sn").addEventListener("input", () => { sanctifyCapEdited = true; updateSanctifyControls(); });
@@ -214,6 +217,7 @@ function renderChips() {
 const TIERS = [
   { key: "primal", quality: "primal", crafted: false, label: "primal" },
   { key: "crafted", quality: "crafted", crafted: true, label: "crafted primal" },
+  { key: "sanctified", quality: "sanctified", crafted: false, label: "sanctified" },
   { key: "ancient", quality: "ancient", crafted: false, label: "ancient" },
   { key: "normal", quality: "normal", crafted: false, label: "legendary" },
 ];
@@ -224,7 +228,7 @@ let run = null;   // the run in flight, or the last one: {base, deadline, i, res
 function readRequest() {
   return {
     ...readSettings(contextNow().season),
-    c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, clampMin(w.stem, String(w.min))]), po: $("po").checked,
+    c: +$("cls").value, i: pickedItem.id, w: wants.map((w) => [w.stem, clampMin(w.stem, String(w.min))]), po: $("po").checked, co: $("co").checked, so: $("so").checked,
   };
 }
 const contextNow = () => ({ season: Math.max(1, Math.round(+$("season").value || 40)), hc: $("hc").value === "1" });
@@ -235,6 +239,7 @@ function startTier() {
   const left = Math.max(1000, run.deadline - performance.now());
   const budget = Math.max(1500, left / (run.tiers.length - run.i));
   const q = { ...run.base, quality: t.quality, end_on_primalize: t.crafted };
+  if (t.key === "sanctified" && (!supportsSanctify(q.season) || q.max_sanctify < 1)) { nextTier(); return; }
   if (t.crafted && q.max_primalize < 1) { nextTier(); return; }
   searchId += 1;
   worker.postMessage({ type: "search", id: searchId, query: q, budgetMs: budget });
@@ -254,7 +259,7 @@ function startRun(req, item, season, hc, secs, onUpdate, onDone, onCancel) {
   run = {
     base: baseQuery(req, item, season, hc), deadline: performance.now() + Math.max(1, secs) * 1000,
     // Primal only keeps natural primals alone: no crafted primal, ancient or plain legendary, so the whole time limit goes to them
-    tiers: req.po ? TIERS.filter((t) => t.key === "primal") : TIERS, po: !!req.po,
+    tiers: TIERS.filter((t) => req.so ? t.key === "sanctified" : req.co ? t.key === "crafted" : req.po ? t.key === "primal" : true), po: !!req.po, only: req.so ? "Sanctified" : req.co ? "Crafted" : req.po ? "Primal" : null,
     i: 0, results: {}, wantsSnap: req.w.map((w) => w[0]), item, show: req.n,
     stopped: false, capped: false, warnings: new Set(), finished: false, onUpdate, onDone, onCancel,
   };
@@ -363,7 +368,9 @@ async function applyLink(parsed) {
   $("cs").value = req.xs;
   $("floor").value = String(req.f);
   $("top").value = String(req.n);
-  $("po").checked = !!req.po;
+  $("po").checked = !!req.po && !req.co && !req.so;
+  $("co").checked = !!req.co && !req.so;
+  $("so").checked = !!req.so;
   wants = req.w.map(([stem, min]) => ({ stem, min }));
   await loadStems();   // drops any stat the item cannot roll and redraws the chips
   if (was.season !== season || was.hc !== hc) {
@@ -443,7 +450,7 @@ window.addEventListener("d3-route", (e) => onRoute(e.detail));
 // ---------- rendering ----------
 
 
-const TIER_OF = { primal: "primal", crafted: "crafted", ancient: "ancient", normal: "normal" };
+const TIER_OF = { primal: "primal", crafted: "crafted", sanctified: "sanctified", ancient: "ancient", normal: "normal" };
 
 
 
@@ -463,15 +470,15 @@ function resultsHtml(run, final) {
     const r = run.results[t.key];
     if (!r) continue;
     for (const h of pickHits(t.key, r, snap, run.show)) {
-      if (shown.some((s) => s.matched >= h.matched.length && s.cost <= h.cost)) continue;
-      shown.push({ matched: h.matched.length, cost: h.cost });
+      if (t.key !== "sanctified" && shown.some((s) => s.tier !== "sanctified" && s.matched >= h.matched.length && s.cost <= h.cost)) continue;
+      shown.push({ tier: t.key, matched: h.matched.length, cost: h.cost });
       body += hitHtml(h, TIER_OF[t.key], snap, run.item, run.base.class, run.base.season, (c) => className(info.classes[c]));
     }
   }
   if (shown.length) html += `<section class="card">${body}</section>`;
   else if (final) {
-    const why = run.po && !run.stopped && !run.capped
-      ? "No primal recipe found. Try fewer stats or a longer time limit, or untick Primal only."
+    const why = run.only && !run.stopped && !run.capped
+      ? `No ${run.only.toLowerCase()} recipe found. Check the season and operation limits, try fewer stats or a longer time limit, or untick ${run.only} only.`
       : run.stopped
       ? "Nothing passable turned up before the time limit. Raise the time limit under Costs and Limits or drop a stat."
       : run.capped

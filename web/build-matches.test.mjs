@@ -5,13 +5,16 @@ import vm from 'node:vm';
 const source=await readFile(new URL('./search-builds.js',import.meta.url),'utf8');
 const context=vm.createContext({});
 vm.runInContext(source.slice(source.indexOf('function targetStats('),source.indexOf('function searchItems(')),context);
-test('build results accept only primals and rank eligible matches by stats then cost',()=>{
+test('build results rank natural, crafted and sanctified matches by stats then cost',()=>{
   const candidate=(tier,count,cost)=>({tier,hit:{matched:Array(count).fill(0),cost}});
   assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('ancient',2,10),candidate('normal',3,1)]).tier,'primal');
-  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('crafted',3,1)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('crafted',3,1)]).tier,'crafted');
   assert.equal(context.bestCandidate([candidate('primal',2,20),candidate('crafted',1,1)]).tier,'primal');
-  assert.equal(context.bestCandidate([candidate('normal',2,1),candidate('ancient',2,1),candidate('crafted',2,1)]),undefined);
+  assert.equal(context.bestCandidate([candidate('normal',2,1),candidate('ancient',2,1)]),undefined);
   assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('primal',2,20)]).hit.cost,20);
+  assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('sanctified',2,5)]).tier,'sanctified');
+  assert.equal(context.bestCandidate([candidate('primal',3,100),candidate('sanctified',2,5)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('sanctified',2,5),candidate('primal',3,100)]).tier,'primal');
 });
 test('every stat a build lists is a target, imported or made by hand',()=>{
   for(const imported of [true,false]){

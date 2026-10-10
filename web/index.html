@@ -50,7 +50,7 @@
   .page { max-width: 1120px; margin: 0 auto; padding: 16px; }
   h1 { margin: 0; }
   h2 { font-size: 1.05rem; margin: 0 0 10px; }
-  .h2row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .h2row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .po { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; cursor: pointer; }
   a { color: var(--accent); }
   .card {
@@ -207,6 +207,7 @@
   dialog#rules h2 { margin: 0 0 8px; font-size: 1.15rem; text-align: center; }
   dialog#rules ul { margin: 0 0 16px; padding-left: 20px; }
   dialog#rules li { margin: 6px 0; }
+.sanctified-power { color: #87cefa; }
 </style>
 </head>
 <body>
@@ -263,7 +264,7 @@
     </section>
 
     <section class="card">
-      <div class="h2row"><h2>2. Stats you want</h2><label class="po" title="Only show recipes that end on a natural primal. Crafted primals (Improve Legendary), ancients and plain legendaries are skipped, so the search spends its whole time limit on natural primals."><input id="po" type="checkbox"> Primal only</label></div>
+      <div class="h2row"><h2>2. Stats you want</h2><label class="po" title="Only show recipes that end on a natural primal. Crafted primals (Improve Legendary), ancients and plain legendaries are skipped, so the search spends its whole time limit on natural primals."><input id="po" type="checkbox"> Primal only</label><label class="po" title="Search only recipes ending with Improve Legendary."><input id="co" type="checkbox"> Crafted only</label><label class="po" title="Search only recipes ending with Sanctification on the selected class."><input id="so" type="checkbox"> Sanctified only</label></div>
       <div id="chips" class="chips"></div>
       <input id="find" type="text" placeholder="Search stats: crit, cooldown, dexterity, multishot&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="pick">
       <div id="pick" class="pick" role="listbox" hidden></div>
@@ -351,8 +352,8 @@
 </div>
 <script defer src="analytics.js"></script>
 <script type="module" src="builds.js?v=f88bec689a"></script>
-<script type="module" src="app.js?v=f88bec689a"></script>
+<script type="module" src="app.js?v=crucible-last-8"></script>
 <script type="module" src="create-build.js?v=f88bec689a"></script>
-<script type="module" src="search-builds.js?v=f88bec689a"></script>
+<script type="module" src="search-builds.js?v=crucible-last-10"></script>
 </body>
 </html>

@@ -123,11 +123,11 @@ export function tooltipRows(lines) {
       rows.push({ stem: l.stem, label: statName(l.stem).replace(" (weapon)", ""), value: `${num(l.value)}–${num(l.value + lines[i + 1].value)}` });
       i += 1;
     } else {
-      rows.push({ stem: l.stem, label: statName(l.stem), value: l.max === 0 && l.value === 0 ? "" : fmtValue(l.stem, l.value) });
+      rows.push({ stem: l.stem, label: l.stem === "sanctified power" ? "One of 3 sanctified powers for this class (random)" : statName(l.stem), value: l.max === 0 && l.value === 0 ? "" : fmtValue(l.stem, l.value) });
     }
   }
   // Major affixes first: weapon damage, then main stats, then the other primaries, then the secondaries (gold find and the like).
-  const rank = (r) => (RANGE_STEMS.has(r.stem) ? 0 : MAIN.has(r.stem) ? 1 : isSecondary(r.stem) ? 3 : 2);
+  const rank = (r) => (RANGE_STEMS.has(r.stem) ? 0 : MAIN.has(r.stem) ? 1 : (r.stem === "sanctified power" || isSecondary(r.stem)) ? 3 : 2);
   return rows.map((r, i) => [r, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
 }
 
@@ -152,7 +152,7 @@ export function requestHash(req, season, hc) {
   const sanctify = (req.sa != null ? `&sa=${e(req.sa)}` : "") + (req.sn != null ? `&sn=${e(req.sn)}` : "");
   const cv = (req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `&cn=${e(req.cn)}` : "";
   const x = (req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `&xn=${e(req.xn ?? DEFAULT_SWAPS)}&xs=${e(req.xs ?? DEFAULT_SWITCH)}` : "";
-  const po = req.po ? "&po=1" : "";
+  const po = req.so ? "&so=1" : req.co ? "&co=1" : req.po ? "&po=1" : "";
   return `#search?c=${req.c}&i=${req.i}&w=${w}&s=${season}&m=${hc ? "hc" : "sc"}&p=${req.p.map(e).join(",")}&f=${req.f}&n=${req.n}${x}${cv}${sanctify}${po}`;
 }
 
@@ -170,7 +170,7 @@ export function parseRequestHash(hash) {
   const season = Math.max(1, Math.round(num("s") || 40));
   return {
     req: {
-      po: q.get("po") === "1",
+      po: q.get("po") === "1", co: q.get("co") === "1", so: q.get("so") === "1",
       c, i, w, p: p.length === 4 && p.every((x) => +x > 0) ? p : DEFAULT_PRICES.slice(), f: num("f") ?? 75, n: Math.max(1, num("n") || 1),
       sa: Number.isFinite(num("sa")) && num("sa") > 0 && num("sa") * 100 <= Number.MAX_SAFE_INTEGER ? q.get("sa") : undefined,
       sn: q.has("sn") && (q.get("sn") === "" || /^\d+$/.test(q.get("sn"))) ? q.get("sn") : undefined,
@@ -186,7 +186,7 @@ export function parseRequestHash(hash) {
 export const savedId = (req) => `${req.c}/${req.i}/${req.w.map(([s, m]) => s + "~" + m).join(",")}/${req.p.join(",")}/${req.f}` +
   ((req.xn ?? DEFAULT_SWAPS) !== DEFAULT_SWAPS || (req.xs ?? DEFAULT_SWITCH) !== DEFAULT_SWITCH ? `/${req.xn ?? DEFAULT_SWAPS}~${req.xs ?? DEFAULT_SWITCH}` : "") +
   ((req.cn ?? DEFAULT_CONVERTS) !== DEFAULT_CONVERTS ? `/c${req.cn}` : "") +
-  (req.sa != null ? `/sa${req.sa}` : "") + (req.sn != null ? `/sn${req.sn}` : "") + (req.po ? "/po" : "");
+  (req.sa != null ? `/sa${req.sa}` : "") + (req.sn != null ? `/sn${req.sn}` : "") + (req.so ? "/so" : req.co ? "/co" : req.po ? "/po" : "");
 
 const SAVED_KEY = "d3r-saved";
 export function savedList() {

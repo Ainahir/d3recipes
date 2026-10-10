@@ -2,7 +2,7 @@
 // credit the source, and visibly link to the site or repository if you use its outputs in a user-facing application.
 // Shared page pieces: the type-ahead picker and the recipe result card, used by custom search and the build pages.
 import { statAbbr, isSecondary, RANGE_STEMS, WEAPON_SLOTS, materials } from "./stats.js?v=f88bec689a";
-import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=f88bec689a";
+import { matsHtml, stepsHtml, tooltipRows, supportsSanctify, defaultSanctifyCap, DEFAULT_SANCTIFY_PRICE } from "./recipe.js?v=crucible-last-8";
 
 // ---------- keyboard-navigable autocomplete ----------
 // source() -> [{html, value}] for the current text; Up/Down move, Enter (or click) picks, Escape closes.
@@ -71,6 +71,7 @@ export function combo(input, box, source, emptyText, onPick) {
 const TAGS = {
   primal:  { best: ["Best", "t-best"], part: ["Finish at Mystic", "t-best"] },
   crafted: { best: ["Best · crafted primal", "t-best"], part: ["Crafted primal · finish at Mystic", "t-best"] },
+  sanctified: { best: ["Best · Sanctified", "t-best"], part: ["Sanctified · finish at Mystic", "t-best"] },
   ancient: { best: ["Great ancient", "t-ancient"], part: ["Great ancient · finish at Mystic", "t-ancient"] },
   normal:  { best: ["Legendary", "t-normal"], part: ["Legendary · finish at Mystic", "t-normal"] },
 };
@@ -92,7 +93,7 @@ export function hitHtml(h, tier, snap, item, cls, season, heroName) {
   }
   const onWeapon = WEAPON_SLOTS.has(item.slot);
   for (const l of h.lines) {
-    if (l.stem === "item power" || seen.has(l.stem) || isSecondary(l.stem) || l.stem === "Sockets" || l.stem === "Indestructible") continue;
+    if ((l.stem === "item power" || l.stem === "sanctified power") || seen.has(l.stem) || isSecondary(l.stem) || l.stem === "Sockets" || l.stem === "Indestructible") continue;
     if (wantStems.has(l.stem)) continue;
     if (onWeapon && RANGE_STEMS.has(l.stem)) continue;   // every weapon rolls its damage; it is a given, so it stays in the full tooltip
     seen.add(l.stem);
@@ -101,12 +102,12 @@ export function hitHtml(h, tier, snap, item, cls, season, heroName) {
   if (!perfect) parts.push(`<span class="want">then Mystic: ${missing.map((m) => statAbbr(m)).join(" or ")}</span>`);
   const lines = tooltipRows(h.lines).map((r) => {
     const w = wantStems.has(r.stem);
-    return `<span class="${w ? "want" : ""}">${r.label}</span><span class="v ${w ? "want" : ""}">${r.value}</span>`;
+    const labelClass = r.stem === "sanctified power" ? "sanctified-power" : w ? "want" : "";
+    return `<span class="${labelClass}">${r.label}</span><span class="v ${w ? "want" : ""}">${r.value}</span>`;
   }).join("");
   const mats = matsHtml(materials(h));
   const craftedNote = tier === "crafted" ? `<div class="small">Improve Legendary primals: only one can be worn per character.</div>` : "";
-  const crucibleNote = tier === "crafted" && supportsSanctify(season)
-    ? `<div class="small">Or use an Angelic Crucible for the last step to create a Sanctified item. Its seasonal power replaces an ordinary secondary affix on six-affix items. The listed cost and materials assume Improve Legendary with ashes.</div>` : "";
+  const crucibleNote = tier === "sanctified" ? `<div class="small">Only one Sanctified item can be worn. The seasonal power is rolled for the selected class; its specific power is not predicted.</div>` : "";
   return `<article class="hit"><div class="head"><span class="tag ${tagCls}">${tagText}</span><span class="aff">${parts.join(", ")}</span></div>
     ${stepsHtml(h, missing, wantStems, { cls, name: heroName })}${craftedNote}${crucibleNote}<div class="mats">${mats}</div>
     <details class="full"><summary>Full tooltip</summary><div class="lines">${lines}</div></details></article>`;
