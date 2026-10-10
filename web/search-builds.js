@@ -79,7 +79,14 @@ function renderBuild(){
 }
 function handleRowOption(el){
   const index=+(el.dataset.row??el.dataset.crafted??el.dataset.sanctified),row=rows[index];
-  if(active && el.dataset.row===undefined)cancel();
+  if(active && el.dataset.row===undefined) {
+   cancel();
+   for(const previous of rows) {
+    previous.results={};previous.best=null;previous.limited=false;previous.limitedBy=null;
+    document.getElementById('build-match-'+previous.index).textContent=previous.owned?'Excluded from search':'Search cancelled — search again';
+   }
+   status.textContent='Build search cancelled because an item search option changed. Search again to update results.';
+  }
   if(el.checked) {
    row.owned=false;row.searchCrafted=false;row.searchSanctified=false;
    for(const other of el.closest('.build-row-options').querySelectorAll('input'))if(other!==el)other.checked=false;

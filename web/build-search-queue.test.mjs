@@ -28,6 +28,7 @@ test('ownership checkbox handler preserves the active build run',()=>{
  const row={index:0,owned:false},other={index:1},run={row:other,queue:[row]};
  const h=harness(run);
  h.context.rows=[row];
+ h.context.status={textContent:""};
  h.context.cancel=()=>{h.context.active=null;};
  vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
  const checkbox={dataset:{row:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
@@ -40,15 +41,24 @@ test('ownership checkbox handler preserves the active build run',()=>{
  assert.equal(h.context.active,run);
  assert.equal(run.queue[0],row);
 });
-test('search-mode checkbox handler cancels the active build run',()=>{
- const row={index:0,owned:true},run={row,queue:[]};
+test('search-mode change cancels the run and invalidates every displayed result',()=>{
+ const row={index:0,owned:true},previous={index:1,owned:false,best:{},results:{primal:{}},limited:true},run={row,queue:[]};
  const h=harness(run);
  h.context.rows=[row];
+ h.context.status={textContent:""};
  h.context.cancel=()=>{h.context.active=null;};
  vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
+ h.context.rows.push(previous);
+ const cells=new Map();
+ h.context.document={getElementById:id=>{if(!cells.has(id))cells.set(id,{textContent:'Old result'});return cells.get(id);}};
  const checkbox={dataset:{crafted:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
  h.context.handleRowOption(checkbox);
  assert.equal(h.context.active,null);
  assert.equal(row.searchCrafted,true);
  assert.equal(row.owned,false);
+ assert.equal(previous.best,null);
+ assert.equal(Object.keys(previous.results).length,0);
+ assert.equal(previous.limited,false);
+ assert.match(cells.get('build-match-1').textContent,/Search cancelled/);
+ assert.match(h.context.status.textContent,/Build search cancelled/);
 });
