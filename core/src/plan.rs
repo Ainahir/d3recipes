@@ -545,14 +545,12 @@ impl Search {
         }
     }
 
-    // Keep the first secondary; the seasonal power occupies the other slot.
+    // Six-affix rolls replace the last secondary; shorter rolls keep every ordinary affix.
     fn sanctified_affixes(&self, aff: &[usize]) -> Vec<usize> {
-        let mut secondary = false;
-        aff.iter().copied().filter(|&a| {
-            if self.d.affixes[a].kind != 1 { return true; }
-            let keep = !secondary;
-            secondary = true;
-            keep
+        if aff.len() != 6 { return aff.to_vec(); }
+        let replaced = aff.iter().rposition(|&a| self.d.affixes[a].kind == 1);
+        aff.iter().copied().enumerate().filter_map(|(i, a)| {
+            if Some(i) == replaced { None } else { Some(a) }
         }).collect()
     }
 
@@ -1032,6 +1030,17 @@ mod cost_tracking_tests {
     }
 
     #[test]
+    fn sanctified_replacement_depends_on_affix_count() {
+        let s = search(1);
+        let primary: Vec<_> = s.d.affixes.iter().enumerate().filter(|(_, a)| a.kind == 0).take(4).map(|(i, _)| i).collect();
+        let secondary: Vec<_> = s.d.affixes.iter().enumerate().filter(|(_, a)| a.kind == 1).take(2).map(|(i, _)| i).collect();
+        let five: Vec<_> = primary[..3].iter().chain(secondary.iter()).copied().collect();
+        assert_eq!(s.sanctified_affixes(&five), five);
+        let six: Vec<_> = primary.iter().chain(secondary.iter()).copied().collect();
+        assert_eq!(s.sanctified_affixes(&six), six[..5]);
+    }
+
+    #[test]
     fn sanctified_endpoints_use_requested_class_and_visible_secondaries() {
         let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
         let q = serde_json::from_value(serde_json::json!({"class":0,"season":40,"slots":["Quiver"],
@@ -1052,7 +1061,11 @@ mod cost_tracking_tests {
         for seed in 1..100 {
             let (aff, _) = s.sim.sanctify(item, seed);
             let visible = s.sanctified_affixes(&aff);
-            assert!(visible.iter().filter(|&&a| s.d.affixes[a].kind == 1).count() <= 1);
+            if aff.len() == 6 {
+                assert_eq!(visible.len(), aff.len() - 1);
+            } else {
+                assert_eq!(visible, aff);
+            }
             for a in aff.iter().filter(|a| !visible.contains(a)) {
                 assert_eq!(s.d.affixes[*a].kind, 1);
             }

@@ -55,3 +55,10 @@ test('broad any queries include Sanctified endpoints on the selected class',()=>
   assert.equal(hit.lines.filter(l=>l.stem==='sanctified power').length,1);
  }
 });
+
+test('five-affix Sanctified items retain their ordinary stats',()=>{
+ const crafted=search('Dagger','crafted').full.find(h=>h.route_class.at(-1)===0);
+ const sanctified=search('Dagger','sanctified').full[0];
+ assert.ok(crafted && sanctified);
+ assert.deepEqual(sanctified.lines.filter(l=>l.stem!=='sanctified power'),crafted.lines);
+});
