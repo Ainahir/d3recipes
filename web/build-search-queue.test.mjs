@@ -23,3 +23,32 @@ test('changing ownership without an active search clears results without startin
   const row={index:0,best:{}};const h=harness(null);h.context.setOwned(row,false);
   assert.equal(row.best,null);assert.equal(h.advanced(),0);assert.equal(h.messages.length,0);
 });
+
+test('ownership checkbox handler preserves the active build run',()=>{
+ const row={index:0,owned:false},other={index:1},run={row:other,queue:[row]};
+ const h=harness(run);
+ h.context.rows=[row];
+ h.context.cancel=()=>{h.context.active=null;};
+ vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
+ const checkbox={dataset:{row:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
+ h.context.handleRowOption(checkbox);
+ assert.equal(h.context.active,run);
+ assert.equal(run.queue.length,0);
+ assert.equal(row.owned,true);
+ checkbox.checked=false;
+ h.context.handleRowOption(checkbox);
+ assert.equal(h.context.active,run);
+ assert.equal(run.queue[0],row);
+});
+test('search-mode checkbox handler cancels the active build run',()=>{
+ const row={index:0,owned:true},run={row,queue:[]};
+ const h=harness(run);
+ h.context.rows=[row];
+ h.context.cancel=()=>{h.context.active=null;};
+ vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
+ const checkbox={dataset:{crafted:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
+ h.context.handleRowOption(checkbox);
+ assert.equal(h.context.active,null);
+ assert.equal(row.searchCrafted,true);
+ assert.equal(row.owned,false);
+});
