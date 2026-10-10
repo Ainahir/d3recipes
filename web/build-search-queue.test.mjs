@@ -4,10 +4,12 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 const source=await readFile(new URL('./search-builds.js',import.meta.url),'utf8');
 function harness(active){
-  const messages=[];let advanced=0;
-  const context=vm.createContext({active,job:1,document:{getElementById:()=>({textContent:''})},worker:{postMessage:m=>messages.push(m)},nextRow:()=>advanced++});
+  const messages=[];let advanced=0,ended=0;
+  const controls={cancel:{hidden:false},run:{disabled:true}};
+  const context=vm.createContext({active,job:1,info:{},build:{},$:id=>controls[id],searchEnded:()=>ended++,document:{getElementById:()=>({textContent:''})},worker:{postMessage:m=>messages.push(m)},nextRow:()=>advanced++});
+  vm.runInContext(source.slice(source.indexOf('function cancel('),source.indexOf('const heroName=')),context);
   vm.runInContext(source.slice(source.indexOf('function setOwned('),source.indexOf("select.addEventListener('change'")),context);
-  return {context,messages,advanced:()=>advanced};
+  return {context,messages,controls,advanced:()=>advanced,ended:()=>ended};
 }
 test('newly needed rows are queued once and stale results cleared',()=>{
   const row={index:1,owned:true,best:{},results:{primal:{}}},current={index:0};
@@ -29,7 +31,6 @@ test('ownership checkbox handler preserves the active build run',()=>{
  const h=harness(run);
  h.context.rows=[row];
  h.context.status={textContent:""};
- h.context.cancel=()=>{h.context.active=null;};
  vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
  const checkbox={dataset:{row:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
  h.context.handleRowOption(checkbox);
@@ -40,13 +41,15 @@ test('ownership checkbox handler preserves the active build run',()=>{
  h.context.handleRowOption(checkbox);
  assert.equal(h.context.active,run);
  assert.equal(run.queue[0],row);
+ assert.equal(h.messages.length,0);
+ assert.equal(h.context.job,1);
+ assert.equal(h.ended(),0);
 });
 test('search-mode change cancels the run and invalidates every displayed result',()=>{
  const row={index:0,owned:true},previous={index:1,owned:false,best:{},results:{primal:{}},limited:true},run={row,queue:[]};
  const h=harness(run);
  h.context.rows=[row];
  h.context.status={textContent:""};
- h.context.cancel=()=>{h.context.active=null;};
  vm.runInContext(source.slice(source.indexOf('function handleRowOption('),source.indexOf('function setOwned(')),h.context);
  h.context.rows.push(previous);
  const cells=new Map();
@@ -54,6 +57,12 @@ test('search-mode change cancels the run and invalidates every displayed result'
  const checkbox={dataset:{crafted:'0'},checked:true,closest:()=>({querySelectorAll:()=>[checkbox]})};
  h.context.handleRowOption(checkbox);
  assert.equal(h.context.active,null);
+ assert.equal(h.messages.length,1);
+ assert.equal(h.messages[0].type,'cancel');
+ assert.equal(h.context.job,2);
+ assert.equal(h.ended(),1);
+ assert.equal(h.controls.cancel.hidden,true);
+ assert.equal(h.controls.run.disabled,false);
  assert.equal(row.searchCrafted,true);
  assert.equal(row.owned,false);
  assert.equal(previous.best,null);
