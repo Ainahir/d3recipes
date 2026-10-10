@@ -13,6 +13,8 @@ test('build results rank natural, crafted and sanctified matches by stats then c
   assert.equal(context.bestCandidate([candidate('normal',2,1),candidate('ancient',2,1)]),undefined);
   assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('primal',2,20)]).hit.cost,20);
   assert.equal(context.bestCandidate([candidate('primal',2,100),candidate('sanctified',2,5)]).tier,'sanctified');
+  assert.equal(context.bestCandidate([candidate('primal',3,100),candidate('sanctified',2,5)]).tier,'primal');
+  assert.equal(context.bestCandidate([candidate('sanctified',2,5),candidate('primal',3,100)]).tier,'primal');
 });
 test('every stat a build lists is a target, imported or made by hand',()=>{
   for(const imported of [true,false]){
