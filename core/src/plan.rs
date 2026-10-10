@@ -1073,6 +1073,22 @@ mod cost_tracking_tests {
     }
 
     #[test]
+    fn off_class_sanctification_continues_to_requested_class_endpoint() {
+        let d = Rc::new(Data::from_json(include_str!("../../web/data.json")).unwrap());
+        let q = serde_json::from_value(serde_json::json!({"class":0,"season":40,"slots":["Helm"],
+            "maxpos":1,"maxsteps":2,"quality":"sanctified","max_primalize":0,
+            "max_sanctify":2,"max_convert":0,"switch":[1],"max_switch":2,"top":100,
+            "cost_h":1,"cost_s":1,"cost_r":10000})).unwrap();
+        let mut s = Search::new(d,q);
+        while !s.run(1000) {}
+        let results = s.results();
+        assert!(results.full.iter().any(|h| {
+            h.quality == "sanctified" && h.route == vec![('S', 1), ('S', 1)]
+                && h.route_class == vec![1, 0]
+        }), "an off-class Sanctification must continue to a full selected-class Sanctified result");
+    }
+
+    #[test]
     fn later_cheaper_arrival_supersedes_an_already_queued_state() {
         let mut s = search(0);
         s.heap.clear();
