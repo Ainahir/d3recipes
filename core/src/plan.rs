@@ -526,7 +526,7 @@ impl Search {
         match q {
             Q::Primal | Q::Ancient => true,
             Q::Normal => matches!(self.quality.as_str(), "any" | "normal"),
-            Q::Sanctified => self.quality == "sanctified",
+            Q::Sanctified => matches!(self.quality.as_str(), "any" | "sanctified"),
             Q::Crafted => self.q.end_on_primalize && matches!(self.quality.as_str(), "any" | "crafted" | "anyprimal"),
         }
     }

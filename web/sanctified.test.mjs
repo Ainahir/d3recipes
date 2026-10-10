@@ -44,3 +44,14 @@ test('replaced secondary cannot satisfy Sanctified requirements; Crafted remains
  assert.ok(search('Helm','crafted').full.some(h=>h.route_class.at(-1)===1));
  assert.equal(tooltipRows(sanctified.lines).at(-1).label,'One of 3 sanctified powers for this class (random)');
 });
+
+test('broad any queries include Sanctified endpoints on the selected class',()=>{
+ const result=search('Helm','any');
+ const hits=result.full.filter(h=>h.quality==='sanctified');
+ assert.ok(hits.length,'any must register Sanctified results');
+ for(const hit of hits){
+  assert.equal(hit.route.at(-1)[0],'S');
+  assert.equal(hit.route_class.at(-1),0);
+  assert.equal(hit.lines.filter(l=>l.stem==='sanctified power').length,1);
+ }
+});
