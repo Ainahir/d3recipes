@@ -35,12 +35,14 @@ test('Sanctified endpoints finish on DH and show only one secondary plus power',
 test('replaced secondary cannot satisfy Sanctified requirements; Crafted remains intact',()=>{
  const crafted=search('Helm','crafted').full.find(h=>h.route_class.at(-1)===0);
  const sanctified=search('Helm','sanctified').full[0];
- const removed=crafted.lines.filter(l=>!sanctified.lines.some(s=>s.stem===l.stem));
- assert.ok(removed.length);
- for(const line of removed){
-  const result=search('Helm','sanctified',[{fam:[line.stem]}]);
-  assert.equal(result.full.length,0);
- }
+ // S40-SC-DH-HELM-1: the first secondary is HitFear, the second is Thorns.
+ // These expectations are fixed independently of the Sanctified output.
+ assert.ok(crafted.lines.some(l=>l.stem==='HitFear'));
+ assert.ok(crafted.lines.some(l=>l.stem==='Thorns'));
+ assert.ok(sanctified.lines.some(l=>l.stem==='HitFear'),'first secondary must remain');
+ assert.ok(!sanctified.lines.some(l=>l.stem==='Thorns'),'second secondary must be replaced');
+ assert.ok(search('Helm','sanctified',[{fam:['HitFear']}]).full.length,'retained secondary must satisfy matching');
+ assert.equal(search('Helm','sanctified',[{fam:['Thorns']}]).full.length,0,'replaced secondary must not satisfy matching');
  assert.ok(search('Helm','crafted').full.some(h=>h.route_class.at(-1)===1));
  assert.equal(tooltipRows(sanctified.lines).at(-1).label,'One of 3 sanctified powers for this class (random)');
 });
